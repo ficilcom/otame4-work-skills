@@ -41,6 +41,22 @@
       ]
     },
     {
+      "name": "otame4-interview",
+      "description": "Interview preparation that starts from the documents already submitted: where an interviewer will dig in, what evidence to have ready, and which questions to bring. (1 skill)",
+      "version": "0.1.0",
+      "source": "./skills/interview",
+      "skills": [
+        "./interview-prep"
+      ],
+      "category": "productivity",
+      "tags": [
+        "agent-skills",
+        "otame4",
+        "career",
+        "interview"
+      ]
+    },
+    {
       "name": "otame4-offer",
       "description": "Offer decisions: checking the working conditions an employer has stated in writing, and putting several offers on one basis by separating fixed overtime and unguaranteed bonus from the stated annual figure. (2 skills)",
       "version": "0.1.0",

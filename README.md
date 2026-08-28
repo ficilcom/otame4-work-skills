@@ -45,6 +45,7 @@ claude plugin marketplace add ficilcom/otame4-work-skills
 | Documents | [`entry-sheet-review`](skills/documents/entry-sheet-review/) | ES・履歴書・職務経歴書を、設問適合・事実の裏づけ・文字数の3点に分けて確認し、利用者が選べる改稿案を出す。 |
 | Research | [`company-research`](skills/research/company-research/) | 応募先を一次情報・公式情報から調べ、すべての事実に出典と時点を付ける。口コミやまとめ記事は事実にせず、面接で確認する論点として残す。 |
 | Research | [`job-posting-analysis`](skills/research/job-posting-analysis/) | 求人票の提示年収から固定残業代を分離し、みなし残業込みの時給に換算する。要件の充足状況と、確認すべき曖昧な条件を出す。 |
+| Interview | [`interview-prep`](skills/interview/interview-prep/) | 提出済みの書類から深掘りされる箇所（裏づけのない主張、主語がチームの記述、職歴の空白、書類が答えていない必須要件）を洗い出し、示す事実を詰める。合否は予測しない。 |
 | Offer | [`offer-terms-check`](skills/offer/offer-terms-check/) | 内定条件が書面で明示されているかを項目ごとに確認し、求人票・面接での説明との食い違いと、承諾期限までに確認すべきことを出す。 |
 | Offer | [`offer-comparison`](skills/offer/offer-comparison/) | 複数の内定を同じ基準に揃える。提示年収から固定残業代と保証のない賞与を分離し、変動しない年額とみなし残業込みの時給で並べる。順位も総合点も出さない。 |
 
