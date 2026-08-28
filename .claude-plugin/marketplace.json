@@ -8,6 +8,22 @@
   },
   "plugins": [
     {
+      "name": "otame4-career",
+      "description": "Taking stock of a work history as facts before any document is written: what was done in each period, the applicant's own role, and what each claim actually rests on. (1 skill)",
+      "version": "0.1.0",
+      "source": "./skills/career",
+      "skills": [
+        "./career-inventory"
+      ],
+      "category": "productivity",
+      "tags": [
+        "agent-skills",
+        "otame4",
+        "career",
+        "self-analysis"
+      ]
+    },
+    {
       "name": "otame4-documents",
       "description": "Entry sheets, rirekisho, and shokumu-keirekisho: drafting and review against the question asked, the evidence available, and the character limit. (1 skill)",
       "version": "0.1.0",
@@ -38,6 +54,39 @@
         "otame4",
         "career",
         "research"
+      ]
+    },
+    {
+      "name": "otame4-interview",
+      "description": "Interview preparation that starts from the documents already submitted: where an interviewer will dig in, what evidence to have ready, and which questions to bring. (1 skill)",
+      "version": "0.1.0",
+      "source": "./skills/interview",
+      "skills": [
+        "./interview-prep"
+      ],
+      "category": "productivity",
+      "tags": [
+        "agent-skills",
+        "otame4",
+        "career",
+        "interview"
+      ]
+    },
+    {
+      "name": "otame4-offer",
+      "description": "Offer decisions: checking the working conditions an employer has stated in writing, and putting several offers on one basis by separating fixed overtime and unguaranteed bonus from the stated annual figure. (2 skills)",
+      "version": "0.1.0",
+      "source": "./skills/offer",
+      "skills": [
+        "./offer-comparison",
+        "./offer-terms-check"
+      ],
+      "category": "productivity",
+      "tags": [
+        "agent-skills",
+        "otame4",
+        "career",
+        "offer"
       ]
     }
   ]
