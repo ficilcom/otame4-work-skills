@@ -39,6 +39,22 @@
         "career",
         "research"
       ]
+    },
+    {
+      "name": "otame4-offer",
+      "description": "Offer decisions: checking the working conditions an employer has stated in writing against the job posting and what was said in interviews before the acceptance deadline. (1 skill)",
+      "version": "0.1.0",
+      "source": "./skills/offer",
+      "skills": [
+        "./offer-terms-check"
+      ],
+      "category": "productivity",
+      "tags": [
+        "agent-skills",
+        "otame4",
+        "career",
+        "offer"
+      ]
     }
   ]
 }
