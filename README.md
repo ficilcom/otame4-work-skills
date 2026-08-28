@@ -17,7 +17,7 @@ npx skills add ficilcom/otame4-work-skills --list
 1つだけ入れる:
 
 ```bash
-npx skills add ficilcom/otame4-work-skills --skill entry-sheet-review
+npx skills add ficilcom/otame4-work-skills --skill company-research
 ```
 
 Claude Code のプラグインとしてまとめて入れる:
@@ -43,6 +43,22 @@ claude plugin marketplace add ficilcom/otame4-work-skills
 | カテゴリ | スキル | 概要 |
 | --- | --- | --- |
 | Documents | [`entry-sheet-review`](skills/documents/entry-sheet-review/) | ES・履歴書・職務経歴書を、設問適合・事実の裏づけ・文字数の3点に分けて確認し、利用者が選べる改稿案を出す。 |
+| Research | [`company-research`](skills/research/company-research/) | 応募先を一次情報・公式情報から調べ、すべての事実に出典と時点を付ける。口コミやまとめ記事は事実にせず、面接で確認する論点として残す。 |
+| Research | [`job-posting-analysis`](skills/research/job-posting-analysis/) | 求人票の提示年収から固定残業代を分離し、みなし残業込みの時給に換算する。要件の充足状況と、確認すべき曖昧な条件を出す。 |
+
+## Web 検索・ページ取得について
+
+`company-research` は公開情報を取りに行く。スキル自体はツールを増やさないため、**利用者の環境で Web 検索やページ取得が使えるかどうか**で挙動が変わる。
+
+| 環境 | Web 取得 |
+| --- | --- |
+| Claude Code | `WebSearch` / `WebFetch` が使える |
+| claude.ai / デスクトップアプリ | ウェブ検索が有効なら使える |
+| API 経由の自作クライアント | 実装次第 |
+
+取得手段がない環境では、スキルは**記憶から企業情報を書かず**、利用者にURLか本文を貼ってもらう手動モードに切り替え、確認できない項目は `unknown` のまま報告に残す。
+
+また、利用規約で自動アクセスを禁止しているサイト（転職口コミサイトなど）を機械的に巡回しない。取得は公開ページの個別参照と検索にとどめる。
 
 ## 共通の制約
 
