@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE = """---
 name: {name}
 description: "PLACEHOLDER: what this skill does, and when an agent should use it."
+license: MIT
 metadata:
   author: ficilcom
 ---

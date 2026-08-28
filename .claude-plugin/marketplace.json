@@ -2,14 +2,14 @@
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "otame4-work-skills",
   "version": "0.1.0",
-  "description": "Otame4 の求職者支援のための Agent Skills。就職活動から転職まで、キャリア相談、応募書類の添削、面接対策、企業研究、内定判断を扱う。",
+  "description": "Practical Agent Skills for Japanese job hunting and career change: self-analysis, entry-sheet and resume review, interview preparation, company research, and offer decisions.",
   "owner": {
     "name": "ficilcom"
   },
   "plugins": [
     {
       "name": "otame4-documents",
-      "description": "エントリーシート、履歴書、職務経歴書の作成と添削。(1 skill)",
+      "description": "Entry sheets, rirekisho, and shokumu-keirekisho: drafting and review against the question asked, the evidence available, and the character limit. (1 skill)",
       "version": "0.1.0",
       "source": "./skills/documents",
       "skills": [

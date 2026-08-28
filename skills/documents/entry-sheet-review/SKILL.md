@@ -1,7 +1,7 @@
 ---
 name: entry-sheet-review
 description: Review and revise Japanese job-application documents (entry sheets, rirekisho, shokumu-keirekisho) by checking each answer against the question asked, the stated character limit, and the evidence the applicant can actually support, then propose concrete rewrites the applicant decides on. Use when a user wants an ES or resume answer critiqued, tightened, or drafted from their own experience; do not use to invent experience, to judge pass or fail probability, or to submit an application.
-license: Proprietary
+license: MIT
 metadata:
   author: ficilcom
 ---
@@ -32,4 +32,4 @@ metadata:
 
 このスキルは分析、改稿案、下書きのみを作る。応募の送信、企業・採用担当者・エージェントへの連絡、求人サイトやATSへの登録・更新、面接日程の確定を自動実行しない。実行が必要な段階では、送信先・内容・時期を示して利用者の明示的な承認を得る。
 
-原稿には氏名、連絡先、生年月日、学籍番号、在籍企業名が含まれる。作業に必要のない個人情報を出力・要約・保存しない。本文中に連絡先が混ざっている場合は削除を提案する。添削の入出力をこのリポジトリにコミットしない。
+原稿には氏名、連絡先、生年月日、学籍番号、在籍企業名が含まれる。作業に必要のない個人情報を出力・要約・保存しない。本文中に連絡先が混ざっている場合は削除を提案する。利用者が明示的に求めない限り、原稿や添削結果をファイルとして保存しない。

@@ -19,9 +19,9 @@ CATEGORIES = {
 }
 FIELD_PATTERN = re.compile(r"^([A-Za-z][A-Za-z0-9_-]*):(?:\s*(.*))?$")
 PLACEHOLDER_PATTERN = re.compile(r"\b(?:TODO|TBD|FIXME|PLACEHOLDER)\b", re.IGNORECASE)
-ALLOWED_LICENSES = {"Proprietary"}
+ALLOWED_LICENSES = {"MIT"}
 
-# 実在する個人の応募書類をサンプルとして取り込んでしまう事故を止めるための最低限の検査。
+# 実在する個人の応募書類をサンプルとして公開してしまう事故を止めるための最低限の検査。
 EMAIL_PATTERN = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 PHONE_PATTERN = re.compile(r"\b0\d{1,4}-\d{1,4}-\d{3,4}\b")
 MYNUMBER_PATTERN = re.compile(r"\b\d{4}[- ]?\d{4}[- ]?\d{4}\b")
@@ -92,7 +92,7 @@ def validate_skill(path: Path) -> list[str]:
 
     license_name = fields.get("license")
     if license_name is not None and license_name not in ALLOWED_LICENSES:
-        problems.append("license must be Proprietary or omitted for this repository")
+        problems.append("license must be MIT or omitted for this repository")
 
     return [f"{relative}: {problem}" for problem in problems]
 

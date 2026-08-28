@@ -4,7 +4,7 @@ __pycache__/
 .venv/
 .worktrees/
 
-# 個人情報を含む可能性のある作業ファイルは絶対にコミットしない
+# 実際の応募書類など、個人情報を含む作業ファイルは公開リポジトリに置かない
 /private/
 /samples-private/
 *.local.json
