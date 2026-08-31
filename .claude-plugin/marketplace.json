@@ -9,12 +9,13 @@
   "plugins": [
     {
       "name": "otame4-career",
-      "description": "Taking stock of a work history as facts before any document is written, and sorting out whether to move employers at all — with staying weighed as an option of equal standing. (2 skills)",
+      "description": "Deciding what to look for and whether to look at all: building criteria that can actually be checked against employers, taking stock of a work history as facts, and weighing a move with staying as an option of equal standing. (3 skills)",
       "version": "0.1.0",
       "source": "./skills/career",
       "skills": [
         "./career-inventory",
-        "./job-change-decision"
+        "./job-change-decision",
+        "./job-hunting-axis"
       ],
       "category": "productivity",
       "tags": [
@@ -77,11 +78,12 @@
     },
     {
       "name": "otame4-offer",
-      "description": "Offer decisions and leaving well: checking the conditions an employer has stated in writing, putting several offers on one basis, and planning the resignation and the move to a new employer. (3 skills)",
+      "description": "Offer decisions and the exits: checking the conditions an employer has stated in writing, putting several offers on one basis, declining the rest, and planning the resignation and the move. (4 skills)",
       "version": "0.1.0",
       "source": "./skills/offer",
       "skills": [
         "./offer-comparison",
+        "./offer-decline",
         "./offer-terms-check",
         "./resignation-plan"
       ],

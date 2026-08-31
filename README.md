@@ -42,6 +42,7 @@ claude plugin marketplace add ficilcom/otame4-work-skills
 
 | カテゴリ | スキル | 概要 |
 | --- | --- | --- |
+| Career | [`job-hunting-axis`](skills/career/job-hunting-axis/) | 「成長できる環境」のような言葉を、何を見れば確認できるかが決まった基準に変える。想像に基づく軸と経験に基づく軸を分け、両立しにくい必須の組み合わせを出す。順位は付けない。 |
 | Career | [`career-inventory`](skills/career/career-inventory/) | 書類を書く前に経験を事実として洗い出す。状況・自分の行動・結果・役割に分け、各主張が何に基づくか（公開情報・手元の資料・当時を知る人・記憶だけ）を記録する。強みや適性は判定しない。 |
 | Career | [`job-change-decision`](skills/career/job-change-decision/) | 現職の不満を「転職で解決する／付いてくる／現職でまだ試していない」に分け、行き先で得たいものと失うものを並べる。留まる選択肢を同格に扱い、結論は出さない。 |
 | Documents | [`entry-sheet-review`](skills/documents/entry-sheet-review/) | ES・履歴書・職務経歴書を、設問適合・事実の裏づけ・文字数の3点に分けて確認し、利用者が選べる改稿案を出す。 |
@@ -52,6 +53,7 @@ claude plugin marketplace add ficilcom/otame4-work-skills
 | Interview | [`interview-debrief`](skills/interview/interview-debrief/) | 終わった面接を、答えきれなかった質問の原因別（書類のずれ・順序の問題・準備漏れ）、未解決の逆質問、口頭のみの条件に整理する。手応えも合否も評価しない。 |
 | Offer | [`offer-terms-check`](skills/offer/offer-terms-check/) | 内定条件が書面で明示されているかを項目ごとに確認し、求人票・面接での説明との食い違いと、承諾期限までに確認すべきことを出す。 |
 | Offer | [`offer-comparison`](skills/offer/offer-comparison/) | 複数の内定を同じ基準に揃える。提示年収から固定残業代と保証のない賞与を分離し、変動しない年額とみなし残業込みの時給で並べる。順位も総合点も出さない。 |
+| Offer | [`offer-decline`](skills/offer/offer-decline/) | 受ける先が書面で確定しているかを確認したうえで、辞退の段階（選考途中・内定後・承諾後）と経路（エージェント・学校推薦・紹介）ごとに誰へ伝えるかを整理する。辞退の可否は判断しない。 |
 | Offer | [`resignation-plan`](skills/offer/resignation-plan/) | 退職の申出日・退職日・入社日を就業規則の定めと突き合わせ、有給の消化、引き継ぎ、書類の受け渡し、空白期間に発生する手続きを整理する。退職の可否は判断しない。 |
 
 ## Web 検索・ページ取得について
