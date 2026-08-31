@@ -42,6 +42,7 @@ claude plugin marketplace add ficilcom/otame4-work-skills
 
 | カテゴリ | スキル | 概要 |
 | --- | --- | --- |
+| Career | [`job-hunting-axis`](skills/career/job-hunting-axis/) | 「成長できる環境」のような言葉を、何を見れば確認できるかが決まった基準に変える。想像に基づく軸と経験に基づく軸を分け、両立しにくい必須の組み合わせを出す。順位は付けない。 |
 | Career | [`career-inventory`](skills/career/career-inventory/) | 書類を書く前に経験を事実として洗い出す。状況・自分の行動・結果・役割に分け、各主張が何に基づくか（公開情報・手元の資料・当時を知る人・記憶だけ）を記録する。強みや適性は判定しない。 |
 | Career | [`job-change-decision`](skills/career/job-change-decision/) | 現職の不満を「転職で解決する／付いてくる／現職でまだ試していない」に分け、行き先で得たいものと失うものを並べる。留まる選択肢を同格に扱い、結論は出さない。 |
 | Documents | [`entry-sheet-review`](skills/documents/entry-sheet-review/) | ES・履歴書・職務経歴書を、設問適合・事実の裏づけ・文字数の3点に分けて確認し、利用者が選べる改稿案を出す。 |
