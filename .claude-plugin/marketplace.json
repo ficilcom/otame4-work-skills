@@ -9,11 +9,12 @@
   "plugins": [
     {
       "name": "otame4-career",
-      "description": "Taking stock of a work history as facts before any document is written: what was done in each period, the applicant's own role, and what each claim actually rests on. (1 skill)",
+      "description": "Taking stock of a work history as facts before any document is written, and sorting out whether to move employers at all — with staying weighed as an option of equal standing. (2 skills)",
       "version": "0.1.0",
       "source": "./skills/career",
       "skills": [
-        "./career-inventory"
+        "./career-inventory",
+        "./job-change-decision"
       ],
       "category": "productivity",
       "tags": [
