@@ -77,11 +77,12 @@
     },
     {
       "name": "otame4-offer",
-      "description": "Offer decisions and leaving well: checking the conditions an employer has stated in writing, putting several offers on one basis, and planning the resignation and the move to a new employer. (3 skills)",
+      "description": "Offer decisions and the exits: checking the conditions an employer has stated in writing, putting several offers on one basis, declining the rest, and planning the resignation and the move. (4 skills)",
       "version": "0.1.0",
       "source": "./skills/offer",
       "skills": [
         "./offer-comparison",
+        "./offer-decline",
         "./offer-terms-check",
         "./resignation-plan"
       ],
