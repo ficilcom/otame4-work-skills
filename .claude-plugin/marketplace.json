@@ -58,10 +58,11 @@
     },
     {
       "name": "otame4-interview",
-      "description": "Interview preparation that starts from the documents already submitted: where an interviewer will dig in, what evidence to have ready, and which questions to bring. (1 skill)",
+      "description": "Interview preparation that starts from the documents already submitted, and a debrief that turns what happened into what to fix before the next round. (2 skills)",
       "version": "0.1.0",
       "source": "./skills/interview",
       "skills": [
+        "./interview-debrief",
         "./interview-prep"
       ],
       "category": "productivity",

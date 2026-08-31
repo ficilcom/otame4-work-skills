@@ -47,6 +47,7 @@ claude plugin marketplace add ficilcom/otame4-work-skills
 | Research | [`company-research`](skills/research/company-research/) | 応募先を一次情報・公式情報から調べ、すべての事実に出典と時点を付ける。口コミやまとめ記事は事実にせず、面接で確認する論点として残す。 |
 | Research | [`job-posting-analysis`](skills/research/job-posting-analysis/) | 求人票の提示年収から固定残業代を分離し、みなし残業込みの時給に換算する。要件の充足状況と、確認すべき曖昧な条件を出す。 |
 | Interview | [`interview-prep`](skills/interview/interview-prep/) | 提出済みの書類から深掘りされる箇所（裏づけのない主張、主語がチームの記述、職歴の空白、書類が答えていない必須要件）を洗い出し、示す事実を詰める。合否は予測しない。 |
+| Interview | [`interview-debrief`](skills/interview/interview-debrief/) | 終わった面接を、答えきれなかった質問の原因別（書類のずれ・順序の問題・準備漏れ）、未解決の逆質問、口頭のみの条件に整理する。手応えも合否も評価しない。 |
 | Offer | [`offer-terms-check`](skills/offer/offer-terms-check/) | 内定条件が書面で明示されているかを項目ごとに確認し、求人票・面接での説明との食い違いと、承諾期限までに確認すべきことを出す。 |
 | Offer | [`offer-comparison`](skills/offer/offer-comparison/) | 複数の内定を同じ基準に揃える。提示年収から固定残業代と保証のない賞与を分離し、変動しない年額とみなし残業込みの時給で並べる。順位も総合点も出さない。 |
 | Offer | [`resignation-plan`](skills/offer/resignation-plan/) | 退職の申出日・退職日・入社日を就業規則の定めと突き合わせ、有給の消化、引き継ぎ、書類の受け渡し、空白期間に発生する手続きを整理する。退職の可否は判断しない。 |
