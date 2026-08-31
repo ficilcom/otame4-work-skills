@@ -9,11 +9,12 @@
   "plugins": [
     {
       "name": "otame4-career",
-      "description": "Taking stock of a work history as facts before any document is written: what was done in each period, the applicant's own role, and what each claim actually rests on. (1 skill)",
+      "description": "Taking stock of a work history as facts before any document is written, and sorting out whether to move employers at all — with staying weighed as an option of equal standing. (2 skills)",
       "version": "0.1.0",
       "source": "./skills/career",
       "skills": [
-        "./career-inventory"
+        "./career-inventory",
+        "./job-change-decision"
       ],
       "category": "productivity",
       "tags": [
@@ -41,12 +42,13 @@
     },
     {
       "name": "otame4-research",
-      "description": "Company research from primary and official sources with every claim dated and attributed, and close reading of a Japanese job posting's pay and requirements. (2 skills)",
+      "description": "Company research from primary and official sources with every claim dated and attributed, close reading of a Japanese job posting's pay and requirements, and triage of incoming scout messages by what they actually disclose. (3 skills)",
       "version": "0.1.0",
       "source": "./skills/research",
       "skills": [
         "./company-research",
-        "./job-posting-analysis"
+        "./job-posting-analysis",
+        "./scout-message-triage"
       ],
       "category": "productivity",
       "tags": [
@@ -58,10 +60,11 @@
     },
     {
       "name": "otame4-interview",
-      "description": "Interview preparation that starts from the documents already submitted: where an interviewer will dig in, what evidence to have ready, and which questions to bring. (1 skill)",
+      "description": "Interview preparation that starts from the documents already submitted, and a debrief that turns what happened into what to fix before the next round. (2 skills)",
       "version": "0.1.0",
       "source": "./skills/interview",
       "skills": [
+        "./interview-debrief",
         "./interview-prep"
       ],
       "category": "productivity",
@@ -74,12 +77,13 @@
     },
     {
       "name": "otame4-offer",
-      "description": "Offer decisions: checking the working conditions an employer has stated in writing, and putting several offers on one basis by separating fixed overtime and unguaranteed bonus from the stated annual figure. (2 skills)",
+      "description": "Offer decisions and leaving well: checking the conditions an employer has stated in writing, putting several offers on one basis, and planning the resignation and the move to a new employer. (3 skills)",
       "version": "0.1.0",
       "source": "./skills/offer",
       "skills": [
         "./offer-comparison",
-        "./offer-terms-check"
+        "./offer-terms-check",
+        "./resignation-plan"
       ],
       "category": "productivity",
       "tags": [
