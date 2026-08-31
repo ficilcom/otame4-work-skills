@@ -74,12 +74,13 @@
     },
     {
       "name": "otame4-offer",
-      "description": "Offer decisions: checking the working conditions an employer has stated in writing, and putting several offers on one basis by separating fixed overtime and unguaranteed bonus from the stated annual figure. (2 skills)",
+      "description": "Offer decisions and leaving well: checking the conditions an employer has stated in writing, putting several offers on one basis, and planning the resignation and the move to a new employer. (3 skills)",
       "version": "0.1.0",
       "source": "./skills/offer",
       "skills": [
         "./offer-comparison",
-        "./offer-terms-check"
+        "./offer-terms-check",
+        "./resignation-plan"
       ],
       "category": "productivity",
       "tags": [
