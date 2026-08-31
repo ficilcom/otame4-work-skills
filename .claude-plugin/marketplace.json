@@ -41,12 +41,13 @@
     },
     {
       "name": "otame4-research",
-      "description": "Company research from primary and official sources with every claim dated and attributed, and close reading of a Japanese job posting's pay and requirements. (2 skills)",
+      "description": "Company research from primary and official sources with every claim dated and attributed, close reading of a Japanese job posting's pay and requirements, and triage of incoming scout messages by what they actually disclose. (3 skills)",
       "version": "0.1.0",
       "source": "./skills/research",
       "skills": [
         "./company-research",
-        "./job-posting-analysis"
+        "./job-posting-analysis",
+        "./scout-message-triage"
       ],
       "category": "productivity",
       "tags": [
