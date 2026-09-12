@@ -30,7 +30,7 @@ claude plugin marketplace add ficilcom/otame4-work-skills
 
 ## 対象範囲
 
-- 自己分析と就活・転職の軸づくり、転職するかどうかの意思決定
+- 自己分析と就活・転職の軸づくり、転職するかどうかの相談、次の仕事・職種の探索
 - エントリーシート、履歴書、職務経歴書の作成と添削
 - 面接・面談の準備と振り返り
 - 業界・企業研究、求人票の読み解き
@@ -44,7 +44,8 @@ claude plugin marketplace add ficilcom/otame4-work-skills
 | --- | --- | --- |
 | Career | [`job-hunting-axis`](skills/career/job-hunting-axis/) | 「成長できる環境」のような言葉を、何を見れば確認できるかが決まった基準に変える。想像に基づく軸と経験に基づく軸を分け、両立しにくい必須の組み合わせを出す。順位は付けない。 |
 | Career | [`career-inventory`](skills/career/career-inventory/) | 書類を書く前に経験を事実として洗い出す。状況・自分の行動・結果・役割に分け、各主張が何に基づくか（公開情報・手元の資料・当時を知る人・記憶だけ）を記録する。強みや適性は判定しない。 |
-| Career | [`job-change-decision`](skills/career/job-change-decision/) | 現職の不満を「転職で解決する／付いてくる／現職でまだ試していない」に分け、行き先で得たいものと失うものを並べる。留まる選択肢を同格に扱い、結論は出さない。 |
+| Career | [`job-change-decision`](skills/career/job-change-decision/) | 「辞めたい」「このままでいいのか」という迷いから対話し、変えたいこと・守りたいことを整理する。条件付きの見立てと小さな次の行動、見直す時期まで考え、最終判断は本人に残す。 |
+| Career | [`career-options`](skills/career/career-options/) | 本人が実際にした作業から次の仕事の候補を作り、経験との接点・未確認の業務や要件・小さな試し方を示す。適職の診断や採用見込みの予測はしない。 |
 | Documents | [`entry-sheet-review`](skills/documents/entry-sheet-review/) | ES・履歴書・職務経歴書を、設問適合・事実の裏づけ・文字数の3点に分けて確認し、利用者が選べる改稿案を出す。 |
 | Research | [`company-research`](skills/research/company-research/) | 応募先を一次情報・公式情報から調べ、すべての事実に出典と時点を付ける。口コミやまとめ記事は事実にせず、面接で確認する論点として残す。 |
 | Research | [`job-posting-analysis`](skills/research/job-posting-analysis/) | 求人票の提示年収から固定残業代を分離し、みなし残業込みの時給に換算する。要件の充足状況と、確認すべき曖昧な条件を出す。 |
@@ -58,7 +59,7 @@ claude plugin marketplace add ficilcom/otame4-work-skills
 
 ## Web 検索・ページ取得について
 
-`company-research` は公開情報を取りに行く。スキル自体はツールを増やさないため、**利用者の環境で Web 検索やページ取得が使えるかどうか**で挙動が変わる。
+`company-research` は公開情報を取りに行く。`career-options` も、候補の仕事内容や要件を具体的に確かめるときに公開情報を参照する。スキル自体はツールを増やさないため、**利用者の環境で Web 検索やページ取得が使えるかどうか**で挙動が変わる。
 
 | 環境 | Web 取得 |
 | --- | --- |
