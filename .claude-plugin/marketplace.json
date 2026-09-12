@@ -9,11 +9,12 @@
   "plugins": [
     {
       "name": "otame4-career",
-      "description": "Deciding what to look for and whether to look at all: building criteria that can actually be checked against employers, taking stock of a work history as facts, and weighing a move with staying as an option of equal standing. (3 skills)",
+      "description": "Career conversations from uncertainty to next steps: weighing a job change, exploring roles through evidence and small experiments, taking stock of experience, and building checkable employer criteria. (4 skills)",
       "version": "0.1.0",
       "source": "./skills/career",
       "skills": [
         "./career-inventory",
+        "./career-options",
         "./job-change-decision",
         "./job-hunting-axis"
       ],

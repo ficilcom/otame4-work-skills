@@ -214,18 +214,18 @@ def collect_flags(
         flags.append(flag)
 
     if not concerns:
-        add("concerns_not_captured", "現状の不満が取り込まれていない。分けるものがない")
+        add("concerns_not_captured", "現状の不満は未入力。不満のない相談では、希望や今後確かめたいことから対話を続けられる")
 
     if sorted_concerns["follows_you"]:
         add(
             "concerns_that_follow_you",
-            "転職しても付いてくると自分で判断した不満がある。転職では解決しない前提で扱う",
+            "転職しても残ると本人が予想した悩みがある。環境によって変わる部分と、その予想を見直す材料を確認できる",
             sorted_concerns["follows_you"],
         )
     if sorted_concerns["portability_unknown"]:
         add(
             "portability_unknown",
-            "転職で解決するかどうかを判断していない不満がある。ここが決まらないと比較にならない",
+            "転職で変わるか未確認の悩みがある。変わる場合と変わらない場合で選択肢を比較できる",
             sorted_concerns["portability_unknown"],
         )
     if sorted_concerns["untried_internally"]:
@@ -243,7 +243,7 @@ def collect_flags(
     if sorted_concerns["industry_wide"]:
         add(
             "industry_wide_concerns",
-            "原因が業界の構造にあるとした不満がある。同じ業界に移る場合は残る前提で扱う",
+            "原因が業界の構造にあると本人が捉えた悩みがある。別の職場でも同じ条件かは未確認",
             sorted_concerns["industry_wide"],
         )
 
@@ -262,7 +262,7 @@ def collect_flags(
         entry["code"] for entry in options if entry["status"] == "not_considered"
     ]
     if not_considered:
-        add("options_not_considered", "検討していない選択肢がある", not_considered)
+        add("options_not_considered", "未検討の選択肢がある。相談に関係するものだけ扱い、全件の検討は求めない", not_considered)
 
     # 検討したうえで外したもの（ruled_out）は、検討済みとして扱う。
     stay_considered = any(
@@ -273,13 +273,13 @@ def collect_flags(
     if not stay_considered:
         add(
             "staying_not_considered",
-            "現職に留まる選択肢が1つも検討されていない。転職を既定にしたまま比較していない",
+            "現職に留まる選択肢の検討は記録されていない。未記録と未検討を区別し、本人の意向と状況に応じて確認する",
         )
 
     if criteria_defined is not True:
         add(
             "decision_criteria_undefined",
-            "何が満たされたら決めるのかが決まっていない。期限だけでは決められない",
+            "判断基準は未確認。結論を急がず、次に確かめることや見直す時期を相談できる",
         )
     if days_to_deadline is not None and days_to_deadline < 0:
         add("decision_deadline_passed", "自分で決めた判断期限を過ぎている")
