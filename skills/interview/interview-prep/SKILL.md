@@ -1,6 +1,6 @@
 ---
 name: interview-prep
-description: Prepare for a Japanese job interview by working from the documents already submitted: find where an interviewer will dig in (claims the applicant cannot back up, work described in the first person plural, outcomes with no measure, gaps or overlaps in the employment history, must-have requirements the documents never answer), and turn them into questions to prepare evidence for. Use when a user has an interview scheduled and wants to know what will be asked and what to have ready, or wants to prepare reverse questions from earlier company research; do not use to predict whether they will pass, to write answers containing experience they did not report, or to schedule or contact anyone.
+description: "Prepare for a Japanese job interview by working from the documents already submitted: find where an interviewer will dig in (claims the applicant cannot back up, work described in the first person plural, outcomes with no measure, gaps or overlaps in the employment history, must-have requirements the documents never answer), and turn them into questions to prepare evidence for. Use when a user has an interview scheduled and wants to know what will be asked and what to have ready, or wants to prepare reverse questions from earlier company research; do not use to predict whether they will pass, to write answers containing experience they did not report, or to schedule or contact anyone."
 license: MIT
 metadata:
   author: ficilcom

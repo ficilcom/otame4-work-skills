@@ -1,6 +1,6 @@
 ---
 name: interview-debrief
-description: Go through an interview that has just finished and sort out what happened: the questions asked and how fully they were answered, which of them were prepared for and which came from the submitted documents, the reverse questions still unanswered, what the employer said about conditions and whether any of it was in writing, and when a result was promised. Use when a user has just come out of an interview and wants to record it while it is fresh or to work out what to fix before the next round; do not use to judge how it went, to estimate whether they will pass, or to read anything into the interviewer's manner.
+description: "Go through an interview that has just finished and sort out what happened: the questions asked and how fully they were answered, which of them were prepared for and which came from the submitted documents, the reverse questions still unanswered, what the employer said about conditions and whether any of it was in writing, and when a result was promised. Use when a user has just come out of an interview and wants to record it while it is fresh or to work out what to fix before the next round; do not use to judge how it went, to estimate whether they will pass, or to read anything into the interviewer's manner."
 license: MIT
 metadata:
   author: ficilcom

@@ -1,4 +1,4 @@
-# Otame4 Work Skills
+# Otame4 Work Skills — 就活・転職・採用のAIスキル
 
 日本の就職活動と転職のための [Agent Skills](https://agentskills.io/) 集。自己分析、エントリーシート・履歴書・職務経歴書の添削、面接対策、企業研究、内定の判断、おためし転職の体験・業務設計までを扱う。
 
@@ -6,7 +6,41 @@
 
 > **English** — A collection of Agent Skills for the Japanese job market: entry sheets (ES), rirekisho and shokumu-keirekisho review, interview preparation, company research, offer decisions, and Otameshi Tenshoku trial planning for candidates and employers. Skill bodies, references, and report templates are written in Japanese; only the `SKILL.md` frontmatter is English so agents can discover them.
 
+**Claude Codeで、応募書類・面接・求人票・おためし転職の相談を具体的な原稿や計画に。** 求人や経験のメモから必要なところに着手でき、特別な入力形式は不要です。
+
+| やりたいこと | 最初に使うSkill | 得られるもの |
+| --- | --- | --- |
+| ES・履歴書・職務経歴書を添削したい | [`entry-sheet-review`](skills/documents/entry-sheet-review/SKILL.md) | 事実と設問に沿った改稿案 |
+| おためし転職に応募・参加したい | [`otameshi-candidate`](skills/trial/otameshi-candidate/SKILL.md) | 応募文、確認質問、体験計画 |
+| 企業として募集・受け入れたい | [`otameshi-employer`](skills/trial/otameshi-employer/SKILL.md) | 募集文、仕事量・期間・報酬の計画 |
+
+[インストールする](#install) · [全スキルを見る](#収録スキル) · [skills.shで探す](https://skills.sh/ficilcom/otame4-work-skills)
+
+<a id="install"></a>
+
 ## インストール
+
+Claude Codeでは、Node.jsの `npx` が使えるターミナルで実行します。以下の `-g` は自分の環境全体に、`-a claude-code` はClaude Codeを対象に入れる指定です。
+
+**求職者：おためし転職の応募・体験準備**
+
+```bash
+npx skills add ficilcom/otame4-work-skills --skill otameshi-candidate -a claude-code -g
+```
+
+**企業：募集・受け入れ・有償業務の設計**
+
+```bash
+npx skills add ficilcom/otame4-work-skills --skill otameshi-employer -a claude-code -g
+```
+
+**応募書類の作成・添削から始める**
+
+```bash
+npx skills add ficilcom/otame4-work-skills --skill entry-sheet-review -a claude-code -g
+```
+
+インストール後、Claude Codeで新しい会話を始め、「おためし転職の応募文を作って」「予算内に収まる体験業務を設計して」「このESを添削して」のように依頼します。名前で指定する場合は「otameshi-candidateを使って」のように伝えます。
 
 すべてのスキルを一覧してから選ぶ:
 
@@ -20,11 +54,14 @@ npx skills add ficilcom/otame4-work-skills --list
 npx skills add ficilcom/otame4-work-skills --skill company-research
 ```
 
-Claude Code のプラグインとしてまとめて入れる:
+Claude Codeのプラグインでは、まずカタログを追加し、続けて使いたいプラグインをインストールします。おためし転職の2スキルをまとめて入れる場合:
 
 ```bash
 claude plugin marketplace add ficilcom/otame4-work-skills
+claude plugin install otame4-trial@otame4-work-skills
 ```
+
+カタログ追加だけではスキルはインストールされません。ほかのカテゴリは `otame4-career`、`otame4-documents`、`otame4-research`、`otame4-interview`、`otame4-offer` を選べます。
 
 手で入れる場合は、スキルのディレクトリを `~/.claude/skills/<skill-name>/` にコピーする。
 
@@ -62,13 +99,7 @@ claude plugin marketplace add ficilcom/otame4-work-skills
 
 ## おためし転職の使い方
 
-求職者は `otameshi-candidate`、企業の採用担当者は `otameshi-employer` を単独で入れられる。Claude Code のプラグインでは `otame4-trial` に2つを収録している。
-
-```bash
-npx skills add ficilcom/otame4-work-skills --skill otameshi-candidate
-```
-
-企業向けを入れる場合は `--skill otameshi-employer` を指定する。
+求職者は `otameshi-candidate`、企業の採用担当者は `otameshi-employer` を使います。[インストール手順](#install)から、自分の立場に合う方を選んでください。
 
 - 求職者：「週末しか動けません。この求人に応募する前に確認することと、応募文を作って」
 - 企業：「記事改善を経験者にお願いしたい。予算と週の稼働に収まる仕事量、期間、募集文を作って」

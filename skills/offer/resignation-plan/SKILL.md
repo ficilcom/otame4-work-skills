@@ -1,6 +1,6 @@
 ---
 name: resignation-plan
-description: Plan a resignation and the move to a new employer: check the intended notice date, last working day, and start date against the notice period the employer's own rules require, count the weekdays left against remaining paid leave, and work through the checklist of handover, documents to receive, items to return, and the insurance, pension, and residual tax steps that a gap between jobs creates. Use when a user has accepted an offer and needs to work out when and how to resign, or wants to know what to confirm before giving notice; do not use to rule on whether they can legally leave, to judge a non-compete clause, to promise the departure will go smoothly, or to notify anyone.
+description: "Plan a resignation and the move to a new employer: check the intended notice date, last working day, and start date against the notice period the employer's own rules require, count the weekdays left against remaining paid leave, and work through the checklist of handover, documents to receive, items to return, and the insurance, pension, and residual tax steps that a gap between jobs creates. Use when a user has accepted an offer and needs to work out when and how to resign, or wants to know what to confirm before giving notice; do not use to rule on whether they can legally leave, to judge a non-compete clause, to promise the departure will go smoothly, or to notify anyone."
 license: MIT
 metadata:
   author: ficilcom

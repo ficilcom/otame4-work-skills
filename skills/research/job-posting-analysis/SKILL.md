@@ -1,6 +1,6 @@
 ---
 name: job-posting-analysis
-description: Read a Japanese job posting closely and report what it actually states: base pay separated from fixed overtime allowance, the range converted to an hourly basis, required versus preferred requirements, and the terms left ambiguous. Use when a user wants a 求人票 or job description examined before applying, wants two postings compared on the same basis, or wants questions prepared about pay and working conditions; do not use to judge whether the user will be hired, to infer duties the posting does not state, or to evaluate the employer's reputation.
+description: "Read a Japanese job posting closely and report what it actually states: base pay separated from fixed overtime allowance, the range converted to an hourly basis, required versus preferred requirements, and the terms left ambiguous. Use when a user wants a 求人票 or job description examined before applying, wants two postings compared on the same basis, or wants questions prepared about pay and working conditions; do not use to judge whether the user will be hired, to infer duties the posting does not state, or to evaluate the employer's reputation."
 license: MIT
 metadata:
   author: ficilcom

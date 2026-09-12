@@ -1,6 +1,6 @@
 ---
 name: scout-message-triage
-description: Sort incoming scout messages and agent-forwarded openings by what they actually disclose: whether the employer is named at all, which of pay, location, employment type, and duties are stated, whether the message refers to the applicant's own history or reads as a mass send, whether a stated salary is an offer or a "up to" figure, and whether the same employer has arrived through more than one route. Use when a user has a backlog of scout messages and wants to know which ones can be researched, what to ask before replying, and what to settle before handing over a resume; do not use to rate how promising an opening is, to judge an employer or an agent, or to reply on the user's behalf.
+description: "Sort incoming scout messages and agent-forwarded openings by what they actually disclose: whether the employer is named at all, which of pay, location, employment type, and duties are stated, whether the message refers to the applicant's own history or reads as a mass send, whether a stated salary is an offer or a \"up to\" figure, and whether the same employer has arrived through more than one route. Use when a user has a backlog of scout messages and wants to know which ones can be researched, what to ask before replying, and what to settle before handing over a resume; do not use to rate how promising an opening is, to judge an employer or an agent, or to reply on the user's behalf."
 license: MIT
 metadata:
   author: ficilcom
