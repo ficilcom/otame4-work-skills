@@ -1,10 +1,10 @@
 # Otame4 Work Skills
 
-日本の就職活動と転職のための [Agent Skills](https://agentskills.io/) 集。自己分析、エントリーシート・履歴書・職務経歴書の添削、面接対策、企業研究、内定の判断までを扱う。
+日本の就職活動と転職のための [Agent Skills](https://agentskills.io/) 集。自己分析、エントリーシート・履歴書・職務経歴書の添削、面接対策、企業研究、内定の判断、おためし転職の体験・業務設計までを扱う。
 
-各スキルは単独でインストールでき、オープンな Agent Skills 仕様に従う。求職者本人が自分の Claude に入れて使うことを前提にしている。
+各スキルは単独でインストールでき、オープンな Agent Skills 仕様に従う。求職者本人が自分の Claude に入れて使うことを前提にしている。`trial` カテゴリでは求人企業の採用担当者にも対応し、それぞれの立場で使うスキルを選べる。
 
-> **English** — A collection of Agent Skills for the Japanese job market: entry sheets (ES), rirekisho and shokumu-keirekisho review, interview preparation, company research, and offer decisions. Skill bodies, references, and report templates are written in Japanese; only the `SKILL.md` frontmatter is English so agents can discover them.
+> **English** — A collection of Agent Skills for the Japanese job market: entry sheets (ES), rirekisho and shokumu-keirekisho review, interview preparation, company research, offer decisions, and Otameshi Tenshoku trial planning for candidates and employers. Skill bodies, references, and report templates are written in Japanese; only the `SKILL.md` frontmatter is English so agents can discover them.
 
 ## インストール
 
@@ -35,6 +35,7 @@ claude plugin marketplace add ficilcom/otame4-work-skills
 - 面接・面談の準備と振り返り
 - 業界・企業研究、求人票の読み解き
 - 内定・オファーの比較、条件確認、退職と入社の準備
+- おためし転職の応募・募集、見学・学習の無償体験、有償業務の仕事量・期間・報酬設計と振り返り
 
 一般論のキャリア論ではなく、具体的な判断と、そのまま使える成果物を出すことを優先する。
 
@@ -56,10 +57,29 @@ claude plugin marketplace add ficilcom/otame4-work-skills
 | Offer | [`offer-comparison`](skills/offer/offer-comparison/) | 複数の内定を同じ基準に揃える。提示年収から固定残業代と保証のない賞与を分離し、変動しない年額とみなし残業込みの時給で並べる。順位も総合点も出さない。 |
 | Offer | [`offer-decline`](skills/offer/offer-decline/) | 受ける先が書面で確定しているかを確認したうえで、辞退の段階（選考途中・内定後・承諾後）と経路（エージェント・学校推薦・紹介）ごとに誰へ伝えるかを整理する。辞退の可否は判断しない。 |
 | Offer | [`resignation-plan`](skills/offer/resignation-plan/) | 退職の申出日・退職日・入社日を就業規則の定めと突き合わせ、有給の消化、引き継ぎ、書類の受け渡し、空白期間に発生する手続きを整理する。退職の可否は判断しない。 |
+| Trial | [`otameshi-candidate`](skills/trial/otameshi-candidate/) | 求職者向け。応募文、体験前の確認質問、学習体験・有償業務の計画、体験後の判断材料を作る。未経験でも企業の実務は有償枠を提案する。 |
+| Trial | [`otameshi-employer`](skills/trial/otameshi-employer/) | 企業向け。募集文・応募者への返信、学習体験の受け入れ、有償業務の範囲・品質・仕事量・期間・報酬・変更条件、フィードバック案を作る。 |
+
+## おためし転職の使い方
+
+求職者は `otameshi-candidate`、企業の採用担当者は `otameshi-employer` を単独で入れられる。Claude Code のプラグインでは `otame4-trial` に2つを収録している。
+
+```bash
+npx skills add ficilcom/otame4-work-skills --skill otameshi-candidate
+```
+
+企業向けを入れる場合は `--skill otameshi-employer` を指定する。
+
+- 求職者：「週末しか動けません。この求人に応募する前に確認することと、応募文を作って」
+- 企業：「記事改善を経験者にお願いしたい。予算と週の稼働に収まる仕事量、期間、募集文を作って」
+
+未経験の分野には見学・学習・模擬課題の無償体験を候補にし、経験を活かす仕事は有償枠を提案する。企業の実務を担う場合は未経験でも有償枠にする。無償体験の掲載可否と活動の扱いは必要時に公式情報で確認する。有償業務は説明・会議・修正まで見積もり、実働時間と実施期間を分ける。
+
+初版は相談・原稿作成・運用準備まで。掲載・応募・返信・日程確定・契約・支払いなどの操作は本人が行う。入力や原稿は、利用者が明示的に求めない限りファイルに残さない。
 
 ## Web 検索・ページ取得について
 
-`company-research` は公開情報を取りに行く。`career-options` も、候補の仕事内容や要件を具体的に確かめるときに公開情報を参照する。スキル自体はツールを増やさないため、**利用者の環境で Web 検索やページ取得が使えるかどうか**で挙動が変わる。
+`company-research` は公開情報を取りに行く。`career-options` も、候補の仕事内容や要件を具体的に確かめるときに公開情報を参照する。`trial` の2つは、判断に必要な料金・契約・支払い・キャンセル・無償掲載可否などを公式情報で確認する。説明に差がある場合は推測で統一せず、確認事項にする。スキル自体はツールを増やさないため、**利用者の環境で Web 検索やページ取得が使えるかどうか**で挙動が変わる。
 
 | 環境 | Web 取得 |
 | --- | --- |
@@ -67,7 +87,7 @@ claude plugin marketplace add ficilcom/otame4-work-skills
 | claude.ai / デスクトップアプリ | ウェブ検索が有効なら使える |
 | API 経由の自作クライアント | 実装次第 |
 
-取得手段がない環境では、スキルは**記憶から企業情報を書かず**、利用者にURLか本文を貼ってもらう手動モードに切り替え、確認できない項目は `unknown` のまま報告に残す。
+取得手段がない環境では、スキルは**記憶から企業情報やサービス条件を書かず**、利用者に該当部分の本文を貼ってもらう手動モードに切り替え、確認できない項目は `unknown` のまま報告に残す。URLだけでは内容を確認済みにしない。
 
 また、利用規約で自動アクセスを禁止しているサイト（転職口コミサイトなど）を機械的に巡回しない。取得は公開ページの個別参照と検索にとどめる。
 
@@ -97,7 +117,8 @@ otame4-work-skills/
 │   │       └── assets/       # 出力雛形（任意）
 │   ├── interview/
 │   ├── research/
-│   └── offer/
+│   ├── offer/
+│   └── trial/
 ├── scripts/
 │   ├── new_skill.py
 │   ├── run_tests.py
@@ -117,6 +138,7 @@ otame4-work-skills/
 | `interview` | 面接・面談対策、想定質問、逆質問、振り返り |
 | `research` | 業界・企業研究、求人票の読み解き、応募先の選定 |
 | `offer` | 内定・オファー比較、条件確認、退職と入社準備 |
+| `trial` | 求職者・求人企業のおためし転職、応募・募集、学習体験・有償業務設計、振り返り |
 
 ## 開発
 

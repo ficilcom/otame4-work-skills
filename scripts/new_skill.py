@@ -15,6 +15,7 @@ CATEGORIES = (
     "interview",
     "research",
     "offer",
+    "trial",
 )
 ROOT = Path(__file__).resolve().parents[1]
 

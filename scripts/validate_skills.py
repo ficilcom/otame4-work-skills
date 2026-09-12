@@ -16,6 +16,7 @@ CATEGORIES = {
     "interview",
     "research",
     "offer",
+    "trial",
 }
 FIELD_PATTERN = re.compile(r"^([A-Za-z][A-Za-z0-9_-]*):(?:\s*(.*))?$")
 PLACEHOLDER_PATTERN = re.compile(r"\b(?:TODO|TBD|FIXME|PLACEHOLDER)\b", re.IGNORECASE)
