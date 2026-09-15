@@ -2,11 +2,28 @@
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "otame4-work-skills",
   "version": "0.1.0",
-  "description": "Practical Agent Skills for Japanese job hunting and career change: self-analysis, entry-sheet and resume review, interview preparation, company research, and offer decisions.",
+  "description": "Practical Agent Skills for Japanese job hunting and career change: self-analysis, document review, interviews, company research, offer decisions, and Otameshi Tenshoku trial planning for candidates and employers.",
   "owner": {
     "name": "ficilcom"
   },
   "plugins": [
+    {
+      "name": "otame4-trial",
+      "description": "Otameshi Tenshoku for candidates and employers: applications, listings, learning visits, paid work scope, workload, duration, compensation, and trial feedback. (2 skills)",
+      "version": "0.1.0",
+      "source": "./skills/trial",
+      "skills": [
+        "./otameshi-candidate",
+        "./otameshi-employer"
+      ],
+      "category": "productivity",
+      "tags": [
+        "agent-skills",
+        "otame4",
+        "trial",
+        "recruiting"
+      ]
+    },
     {
       "name": "otame4-career",
       "description": "Career conversations from uncertainty to next steps: weighing a job change, exploring roles through evidence and small experiments, taking stock of experience, and building checkable employer criteria. (4 skills)",

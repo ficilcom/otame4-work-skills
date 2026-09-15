@@ -16,6 +16,7 @@ CATEGORIES = {
     "interview",
     "research",
     "offer",
+    "trial",
 }
 FIELD_PATTERN = re.compile(r"^([A-Za-z][A-Za-z0-9_-]*):(?:\s*(.*))?$")
 PLACEHOLDER_PATTERN = re.compile(r"\b(?:TODO|TBD|FIXME|PLACEHOLDER)\b", re.IGNORECASE)
@@ -55,6 +56,15 @@ def parse_frontmatter(path: Path) -> tuple[dict[str, str], list[str]]:
             problems.append(f"invalid top-level frontmatter line: {line!r}")
             continue
         key, value = match.groups()
+        raw_value = (value or "").strip()
+        # The skills CLI rejects a colon followed by whitespace in a plain YAML scalar.
+        # Keep this dependency-free check focused on that discovery failure.
+        if (
+            key == "description"
+            and not raw_value.startswith(("'", '"'))
+            and re.search(r":(?:\s|$)", raw_value)
+        ):
+            problems.append("description containing a colon followed by whitespace must be quoted for valid YAML")
         fields[key] = (value or "").strip().strip("'\"")
 
     body = "\n".join(lines[closing + 1 :]).strip()
