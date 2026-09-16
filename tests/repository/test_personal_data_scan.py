@@ -50,6 +50,21 @@ class PersonalDataScanTest(unittest.TestCase):
                 problems = [p for p in self.scan(text) if "12-digit" in p]
                 self.assertEqual(problems, [])
 
+    def test_never_echoes_the_matched_value(self):
+        """検証の出力は端末とCIのログに残る。公開リポジトリなので値は書かない。"""
+        secrets = ("taro@kakuu-corp.invalid", "03-1234-5678", "1234-5678-9012")
+        problems = self.scan("連絡先は {} と {}、番号は {} です。".format(*secrets))
+        self.assertEqual(len(problems), 3)
+        joined = " ".join(problems)
+        for secret in secrets:
+            self.assertNotIn(secret, joined)
+
+    def test_reports_the_line_the_value_is_on(self):
+        """値を出さない代わりに、直す側が場所を特定できるようにする。"""
+        problems = self.scan("一行目\n二行目\n電話は03-1234-5678です。\n")
+        self.assertEqual(len(problems), 1)
+        self.assertIn("__scan_probe__.md:3:", problems[0])
+
     def test_skips_non_text_suffixes(self):
         self.assertEqual(self.scan("電話は03-1234-5678です。", name="__scan_probe__.png"), [])
 

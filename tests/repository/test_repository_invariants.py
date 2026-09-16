@@ -54,7 +54,7 @@ class BoundarySectionTest(unittest.TestCase):
 class RegistryTest(unittest.TestCase):
     """スキル一覧を手で持っている場所が実体とズレたら落ちること。"""
 
-    def run_with(self, readme=None, skills_sh=None, skill_names=("alpha", "beta")):
+    def run_with(self, readme=None, skills_sh=None, on_disk=(("career", "alpha"), ("career", "beta"))):
         original = (MODULE.README_FILE, MODULE.SKILLS_SH_FILE)
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
@@ -64,7 +64,7 @@ class RegistryTest(unittest.TestCase):
             if skills_sh is not None:
                 (base / "skills.sh.json").write_text(skills_sh, encoding="utf-8")
                 MODULE.SKILLS_SH_FILE = base / "skills.sh.json"
-            files = [base / "career" / name / "SKILL.md" for name in skill_names]
+            files = [base / category / name / "SKILL.md" for category, name in on_disk]
             try:
                 return MODULE.validate_registries(files)
             finally:
@@ -88,6 +88,14 @@ class RegistryTest(unittest.TestCase):
         problems = self.run_with(readme, config)
         self.assertEqual(len(problems), 1)
         self.assertIn("ghost", problems[0])
+
+    def test_reports_a_readme_link_pointing_at_the_wrong_category(self):
+        """名前だけで比べると、スキルを別カテゴリへ移したときのリンク切れを見逃す。"""
+        readme = "## 収録スキル\n\n| C | [`alpha`](skills/career/alpha/) | x |\n\n## 次\n"
+        config = json.dumps({"groupings": [{"skills": ["alpha"]}]})
+        problems = self.run_with(readme, config, on_disk=(("research", "alpha"),))
+        self.assertEqual(len(problems), 1)
+        self.assertIn("skills/research/alpha/", problems[0])
 
     def test_reports_a_missing_readme_section(self):
         readme = "# Title\n\nno listing here\n"
