@@ -31,7 +31,7 @@ license: MIT
 
 雛形を埋めたら `.claude-plugin/marketplace.json` にスキルを追加する。カテゴリ初のスキルなら、そのカテゴリのプラグイン項目ごと追加する。
 
-追加・改名・削除時は、READMEの一覧と `skills.sh.json` の表示グループも更新する。`description` にコロンと空白を含める場合は値全体を引用符で囲む。公開前に `DISABLE_TELEMETRY=1 npx skills add . --list` で全スキルが読み飛ばされずに表示されることを確認する。このコマンドはインストールしない。
+追加・改名・削除時は、READMEの一覧と `skills.sh.json` の表示グループも更新する。`python3 scripts/validate_skills.py` が3箇所すべてを実体と突き合わせるので、更新漏れはそこで落ちる。`description` にコロンと空白を含める場合は値全体を引用符で囲む。公開前に `DISABLE_TELEMETRY=1 npx skills add . --list` で全スキルが読み飛ばされずに表示されることを確認する。このコマンドはインストールしない。
 
 skills.shの表示設定は、デフォルトブランチへの反映後、テレメトリ有効の実際のCLIインストールを通じて取得される。設定ファイルの追加やページ閲覧だけで掲載・即時更新されるわけではない。詳細は [表示設定](https://skills.sh/docs/customize) と [掲載のFAQ](https://skills.sh/docs/faq) を参照する。
 

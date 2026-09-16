@@ -5,10 +5,10 @@
 ## 構成
 
 - スキルは `skills/<category>/<skill-name>/SKILL.md` に置く。
-- カテゴリは `career`、`documents`、`interview`、`research`、`offer`、`trial` のいずれか。新設する場合は `scripts/validate_skills.py` と `scripts/new_skill.py` の `CATEGORIES` を同時に更新する。
+- カテゴリは `career`、`documents`、`interview`、`research`、`offer`、`trial` のいずれか。定義は `scripts/_repo.py` の `CATEGORIES` だけにあるので、新設するときはそこを更新する。
 - `scripts/`、`references/`、`assets/` は、そのスキルの手順が実際に必要とする場合だけ追加する。
 - スキル同梱の `scripts/_common.py` は生成物であり、直接編集しない。入力検証とCLIの定型は `scripts/_common_source.py` だけを編集し、`python3 scripts/sync_common.py` で配り直す。スキルは単独でインストールされ、`skills/<category>/<skill-name>/` より上の階層は利用者の環境に届かないため、リポジトリ共通のモジュールを import できない。
-- スキルを追加・削除したら `.claude-plugin/marketplace.json` を更新する。検証スクリプトが不一致を落とす。
+- スキルを追加・改名・削除したら `.claude-plugin/marketplace.json`、READMEの収録スキル表、`skills.sh.json` の表示グループを更新する。検証スクリプトが3箇所すべての不一致を落とす。
 - `PLACEHOLDER` や `TODO` が残った雛形をコミットしない。
 
 ## 執筆
@@ -16,6 +16,7 @@
 - 名前は小文字とハイフンのみ、64文字以内、親ディレクトリ名と一致させる。
 - `description` は「何をするか」と「いつ使うか」の両方を英語で書く（エージェントの検索用）。本文と参照資料は日本語で書く。
 - `SKILL.md` は簡潔に保ち、条件分岐する詳細は `references/` に逃がす。
+- `## 個人情報と権限境界` の節を置き、外部への行為を勝手に実行しないことを本文で約束する。検証スクリプトが節の有無と約束の記載を確認する。文面はスキルごとに変えてよく、注意すべき点が違うので揃えない。
 - 手順を固定しすぎない。妥当なやり方が複数ある場面では、判断基準と確認できる成果物で書く。
 - 制度・法令・給与相場・採用慣行など時点に依存する事実は、必要なときに一次情報を確認する。記憶で断定しない。
 
