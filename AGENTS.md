@@ -7,6 +7,7 @@
 - スキルは `skills/<category>/<skill-name>/SKILL.md` に置く。
 - カテゴリは `career`、`documents`、`interview`、`research`、`offer`、`trial` のいずれか。新設する場合は `scripts/validate_skills.py` と `scripts/new_skill.py` の `CATEGORIES` を同時に更新する。
 - `scripts/`、`references/`、`assets/` は、そのスキルの手順が実際に必要とする場合だけ追加する。
+- スキル同梱の `scripts/_common.py` は生成物であり、直接編集しない。入力検証とCLIの定型は `scripts/_common_source.py` だけを編集し、`python3 scripts/sync_common.py` で配り直す。スキルは単独でインストールされ、`skills/<category>/<skill-name>/` より上の階層は利用者の環境に届かないため、リポジトリ共通のモジュールを import できない。
 - スキルを追加・削除したら `.claude-plugin/marketplace.json` を更新する。検証スクリプトが不一致を落とす。
 - `PLACEHOLDER` や `TODO` が残った雛形をコミットしない。
 
@@ -41,5 +42,7 @@
 ```bash
 python3 scripts/validate_skills.py && python3 scripts/run_tests.py
 ```
+
+`validate_skills.py` は配布した `_common.py` が単一ソースと一致するかも調べる。ズレたら `python3 scripts/sync_common.py` で配り直してコミットする。
 
 新規または大幅に変更したスキルは、現実的な依頼で実際に動かし、見出しや文言だけでなく出力を確認する。

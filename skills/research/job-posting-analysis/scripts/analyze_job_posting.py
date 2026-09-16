@@ -8,12 +8,18 @@
 
 from __future__ import annotations
 
-import argparse
-import json
-import sys
-from decimal import Decimal, ROUND_HALF_UP
-from pathlib import Path
+from decimal import Decimal
 from typing import Any
+
+from _common import (
+    flag_collector,
+    optional_number,
+    require_list,
+    require_object,
+    require_text,
+    round_yen,
+    run_cli,
+)
 
 
 REQUIREMENT_KINDS = ("must", "want")
@@ -25,51 +31,17 @@ PAY_BASIS = ("posted", "user_provided", "estimated", "unknown")
 MONTHLY_OVERTIME_REFERENCE_HOURS = 45
 # レンジの上下が開きすぎている求人は、提示条件が実質未確定として扱う。
 WIDE_RANGE_RATIO = Decimal("1.5")
-YEN = Decimal("1")
-
-
-def _require_object(value: object, path: str) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        raise ValueError(f"{path} must be an object")
-    return value
-
-
-def _require_list(value: object, path: str) -> list[Any]:
-    if not isinstance(value, list):
-        raise ValueError(f"{path} must be a list")
-    return value
-
-
-def _require_text(value: object, path: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{path} must be a non-empty string")
-    return value.strip()
-
-
-def _optional_number(value: object, path: str, *, allow_zero: bool = True) -> Decimal | None:
-    if value is None:
-        return None
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise ValueError(f"{path} must be a number or null")
-    number = Decimal(str(value))
-    if number < 0 or (number == 0 and not allow_zero):
-        raise ValueError(f"{path} must be a positive number")
-    return number
-
-
-def _round_yen(value: Decimal) -> int:
-    return int(value.quantize(YEN, rounding=ROUND_HALF_UP))
 
 
 def parse_compensation(raw: object) -> dict[str, Any]:
-    compensation = _require_object(raw, "compensation")
+    compensation = require_object(raw, "compensation")
 
     basis = compensation.get("basis", "unknown")
     if basis not in PAY_BASIS:
         raise ValueError(f"compensation.basis must be one of {list(PAY_BASIS)}")
 
-    annual_min = _optional_number(compensation.get("annual_min"), "compensation.annual_min", allow_zero=False)
-    annual_max = _optional_number(compensation.get("annual_max"), "compensation.annual_max", allow_zero=False)
+    annual_min = optional_number(compensation.get("annual_min"), "compensation.annual_min", allow_zero=False)
+    annual_max = optional_number(compensation.get("annual_max"), "compensation.annual_max", allow_zero=False)
     if annual_min is not None and annual_max is not None and annual_min > annual_max:
         raise ValueError("compensation.annual_min must not exceed compensation.annual_max")
 
@@ -77,12 +49,12 @@ def parse_compensation(raw: object) -> dict[str, Any]:
     if raw_fixed is None:
         fixed = {"disclosed": False, "included_in_range": None, "hours": None, "annual_amount": None}
     else:
-        block = _require_object(raw_fixed, "compensation.fixed_overtime")
+        block = require_object(raw_fixed, "compensation.fixed_overtime")
         included = block.get("included_in_range")
         if included is not None and not isinstance(included, bool):
             raise ValueError("compensation.fixed_overtime.included_in_range must be a boolean or null")
-        hours = _optional_number(block.get("hours"), "compensation.fixed_overtime.hours")
-        amount = _optional_number(block.get("annual_amount"), "compensation.fixed_overtime.annual_amount")
+        hours = optional_number(block.get("hours"), "compensation.fixed_overtime.hours")
+        amount = optional_number(block.get("annual_amount"), "compensation.fixed_overtime.annual_amount")
         fixed = {
             "disclosed": True,
             "included_in_range": included,
@@ -106,25 +78,25 @@ def parse_compensation(raw: object) -> dict[str, Any]:
 def parse_working_hours(raw: object) -> dict[str, Any]:
     if raw is None:
         return {"system": "unknown", "monthly_scheduled_hours": None}
-    hours = _require_object(raw, "working_hours")
+    hours = require_object(raw, "working_hours")
     system = hours.get("system", "unknown")
     if system not in WORKING_TIME_SYSTEMS:
         raise ValueError(f"working_hours.system must be one of {list(WORKING_TIME_SYSTEMS)}")
 
-    monthly = _optional_number(hours.get("monthly_scheduled_hours"), "working_hours.monthly_scheduled_hours", allow_zero=False)
+    monthly = optional_number(hours.get("monthly_scheduled_hours"), "working_hours.monthly_scheduled_hours", allow_zero=False)
     if monthly is None:
-        daily = _optional_number(hours.get("daily_scheduled_hours"), "working_hours.daily_scheduled_hours", allow_zero=False)
-        days = _optional_number(hours.get("monthly_working_days"), "working_hours.monthly_working_days", allow_zero=False)
+        daily = optional_number(hours.get("daily_scheduled_hours"), "working_hours.daily_scheduled_hours", allow_zero=False)
+        days = optional_number(hours.get("monthly_working_days"), "working_hours.monthly_working_days", allow_zero=False)
         monthly = daily * days if daily is not None and days is not None else None
 
     return {"system": system, "monthly_scheduled_hours": monthly}
 
 
 def parse_requirements(raw: object) -> list[dict[str, Any]]:
-    entries = _require_list(raw if raw is not None else [], "requirements")
+    entries = require_list(raw if raw is not None else [], "requirements")
     parsed = []
     for index, entry in enumerate(entries):
-        item = _require_object(entry, f"requirements[{index}]")
+        item = require_object(entry, f"requirements[{index}]")
         kind = item.get("kind", "must")
         if kind not in REQUIREMENT_KINDS:
             raise ValueError(f"requirements[{index}].kind must be one of {list(REQUIREMENT_KINDS)}")
@@ -133,7 +105,7 @@ def parse_requirements(raw: object) -> list[dict[str, Any]]:
             raise ValueError(f"requirements[{index}].user_status must be one of {list(USER_STATUSES)}")
         parsed.append(
             {
-                "text": _require_text(item.get("text"), f"requirements[{index}].text"),
+                "text": require_text(item.get("text"), f"requirements[{index}].text"),
                 "kind": kind,
                 "user_status": status,
                 "measurable": bool(item.get("measurable", False)),
@@ -155,7 +127,7 @@ def build_pay_breakdown(compensation: dict[str, Any], working: dict[str, Any]) -
             return None
         if not fixed["disclosed"] or fixed_amount is None or included is None:
             return None
-        return _round_yen(annual - fixed_amount if included else annual)
+        return round_yen(annual - fixed_amount if included else annual)
 
     base_min = base(annual_min)
     base_max = base(annual_max)
@@ -169,15 +141,15 @@ def build_pay_breakdown(compensation: dict[str, Any], working: dict[str, Any]) -
     def hourly(annual: Decimal | None) -> int | None:
         if annual is None or annual_hours is None or annual_hours == 0:
             return None
-        return _round_yen(annual / annual_hours)
+        return round_yen(annual / annual_hours)
 
     range_ratio = None
     if annual_min is not None and annual_max is not None and annual_min > 0:
         range_ratio = float((annual_max / annual_min).quantize(Decimal("0.01")))
 
     return {
-        "stated_annual_min": _round_yen(annual_min) if annual_min is not None else None,
-        "stated_annual_max": _round_yen(annual_max) if annual_max is not None else None,
+        "stated_annual_min": round_yen(annual_min) if annual_min is not None else None,
+        "stated_annual_max": round_yen(annual_max) if annual_max is not None else None,
         "base_annual_min_excluding_fixed_overtime": base_min,
         "base_annual_max_excluding_fixed_overtime": base_max,
         "assumed_annual_hours": float(annual_hours) if annual_hours is not None else None,
@@ -193,10 +165,7 @@ def collect_flags(
     pay: dict[str, Any],
     requirements: list[dict[str, Any]],
 ) -> list[dict[str, str]]:
-    flags: list[dict[str, str]] = []
-
-    def add(code: str, message: str) -> None:
-        flags.append({"code": code, "message": message})
+    flags, add = flag_collector()
 
     if compensation["basis"] in ("estimated", "unknown"):
         add("pay_basis_unconfirmed", "提示年収の出所が未確認。求人票の原文で確認するまで比較に使わない")
@@ -248,8 +217,8 @@ def collect_flags(
 
 
 def analyze(payload: object) -> dict[str, Any]:
-    data = _require_object(payload, "input")
-    title = _require_text(data.get("title"), "title")
+    data = require_object(payload, "input")
+    title = require_text(data.get("title"), "title")
 
     compensation = parse_compensation(data.get("compensation", {}))
     working = parse_working_hours(data.get("working_hours"))
@@ -261,8 +230,8 @@ def analyze(payload: object) -> dict[str, Any]:
         counts[item["kind"]][item["user_status"]] += 1
 
     open_questions = [
-        _require_text(question, f"open_questions[{index}]")
-        for index, question in enumerate(_require_list(data.get("open_questions", []), "open_questions"))
+        require_text(question, f"open_questions[{index}]")
+        for index, question in enumerate(require_list(data.get("open_questions", []), "open_questions"))
     ]
 
     return {
@@ -287,26 +256,7 @@ def analyze(payload: object) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("input", nargs="?", help="入力JSONのパス。省略した場合は標準入力から読む")
-    args = parser.parse_args(argv)
-
-    raw = Path(args.input).read_text(encoding="utf-8") if args.input else sys.stdin.read()
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError as error:
-        print(f"input is not valid JSON: {error}", file=sys.stderr)
-        return 2
-
-    try:
-        report = analyze(payload)
-    except ValueError as error:
-        print(str(error), file=sys.stderr)
-        return 2
-
-    json.dump(report, sys.stdout, ensure_ascii=False, indent=2)
-    sys.stdout.write("\n")
-    return 0
+    return run_cli(analyze, __doc__, argv)
 
 
 if __name__ == "__main__":

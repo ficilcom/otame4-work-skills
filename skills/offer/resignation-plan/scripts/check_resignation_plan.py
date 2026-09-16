@@ -8,12 +8,18 @@
 
 from __future__ import annotations
 
-import argparse
-import json
-import sys
 from datetime import date, timedelta
-from pathlib import Path
 from typing import Any
+
+from _common import (
+    flag_collector,
+    optional_bool,
+    optional_date,
+    optional_int,
+    require_list,
+    require_object,
+    run_cli,
+)
 
 
 CONTRACT_TYPES = ("indefinite", "fixed_term", "unknown")
@@ -50,47 +56,6 @@ CHECKLIST_CODES = {code for code, _, _ in CHECKLIST}
 TASK_CODES = {code for code, _, group in CHECKLIST if group == "task"}
 
 
-def _require_object(value: object, path: str) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        raise ValueError(f"{path} must be an object")
-    return value
-
-
-def _require_list(value: object, path: str) -> list[Any]:
-    if not isinstance(value, list):
-        raise ValueError(f"{path} must be a list")
-    return value
-
-
-def _optional_bool(value: object, path: str) -> bool | None:
-    if value is None:
-        return None
-    if not isinstance(value, bool):
-        raise ValueError(f"{path} must be a boolean or null")
-    return value
-
-
-def _optional_date(value: object, path: str) -> date | None:
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        raise ValueError(f"{path} must be an ISO date string (YYYY-MM-DD) or null")
-    try:
-        return date.fromisoformat(value)
-    except ValueError as error:
-        raise ValueError(f"{path} is not an ISO date (YYYY-MM-DD): {error}") from error
-
-
-def _optional_int(value: object, path: str) -> int | None:
-    if value is None:
-        return None
-    if isinstance(value, bool) or not isinstance(value, int):
-        raise ValueError(f"{path} must be an integer or null")
-    if value < 0:
-        raise ValueError(f"{path} must not be negative")
-    return value
-
-
 def count_weekdays(start: date, end: date) -> int:
     """申出日の翌日から退職日までの平日数。祝日と会社の休日は含まない概算。"""
     if end <= start:
@@ -105,7 +70,7 @@ def count_weekdays(start: date, end: date) -> int:
 
 
 def parse_current(raw: object) -> dict[str, Any]:
-    current = _require_object(raw if raw is not None else {}, "current")
+    current = require_object(raw if raw is not None else {}, "current")
     contract_type = current.get("contract_type", "unknown")
     if contract_type not in CONTRACT_TYPES:
         raise ValueError(f"current.contract_type must be one of {list(CONTRACT_TYPES)}")
@@ -115,35 +80,35 @@ def parse_current(raw: object) -> dict[str, Any]:
     return {
         "contract_type": contract_type,
         "notice_rule_source": rule_source,
-        "notice_days_required": _optional_int(
+        "notice_days_required": optional_int(
             current.get("notice_days_required"), "current.notice_days_required"
         ),
-        "contract_end": _optional_date(current.get("contract_end"), "current.contract_end"),
+        "contract_end": optional_date(current.get("contract_end"), "current.contract_end"),
     }
 
 
 def parse_dates(raw: object) -> dict[str, Any]:
-    dates = _require_object(raw if raw is not None else {}, "dates")
-    notice = _optional_date(dates.get("intended_notice_date"), "dates.intended_notice_date")
-    last_day = _optional_date(dates.get("desired_last_day"), "dates.desired_last_day")
-    start_new = _optional_date(dates.get("start_date_new"), "dates.start_date_new")
+    dates = require_object(raw if raw is not None else {}, "dates")
+    notice = optional_date(dates.get("intended_notice_date"), "dates.intended_notice_date")
+    last_day = optional_date(dates.get("desired_last_day"), "dates.desired_last_day")
+    start_new = optional_date(dates.get("start_date_new"), "dates.start_date_new")
     if notice is not None and last_day is not None and last_day < notice:
         raise ValueError("dates.desired_last_day must not precede dates.intended_notice_date")
     return {
         "intended_notice_date": notice,
         "desired_last_day": last_day,
         "start_date_new": start_new,
-        "paid_leave_days_remaining": _optional_int(
+        "paid_leave_days_remaining": optional_int(
             dates.get("paid_leave_days_remaining"), "dates.paid_leave_days_remaining"
         ),
     }
 
 
 def parse_items(raw: object) -> dict[str, dict[str, Any]]:
-    entries = _require_list(raw if raw is not None else [], "items")
+    entries = require_list(raw if raw is not None else [], "items")
     parsed: dict[str, dict[str, Any]] = {}
     for index, entry in enumerate(entries):
-        item = _require_object(entry, f"items[{index}]")
+        item = require_object(entry, f"items[{index}]")
         code = item.get("code")
         if code not in CHECKLIST_CODES:
             raise ValueError(f"items[{index}].code is not a known checklist code: {code!r}")
@@ -210,13 +175,7 @@ def collect_flags(
     checklist: list[dict[str, Any]],
     offer_accepted: bool | None,
 ) -> list[dict[str, Any]]:
-    flags: list[dict[str, Any]] = []
-
-    def add(code: str, message: str, items: list[str] | None = None) -> None:
-        flag: dict[str, Any] = {"code": code, "message": message}
-        if items:
-            flag["items"] = items
-        flags.append(flag)
+    flags, add = flag_collector()
 
     if offer_accepted is not True:
         add(
@@ -287,11 +246,11 @@ def collect_flags(
 
 
 def check(payload: object) -> dict[str, Any]:
-    data = _require_object(payload, "input")
+    data = require_object(payload, "input")
     current = parse_current(data.get("current"))
     dates = parse_dates(data.get("dates"))
     items = parse_items(data.get("items"))
-    offer_accepted = _optional_bool(data.get("offer_accepted"), "offer_accepted")
+    offer_accepted = optional_bool(data.get("offer_accepted"), "offer_accepted")
 
     schedule = build_schedule(current, dates)
     checklist = build_checklist(items)
@@ -328,26 +287,7 @@ def check(payload: object) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("input", nargs="?", help="入力JSONのパス。省略した場合は標準入力から読む")
-    args = parser.parse_args(argv)
-
-    raw = Path(args.input).read_text(encoding="utf-8") if args.input else sys.stdin.read()
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError as error:
-        print(f"input is not valid JSON: {error}", file=sys.stderr)
-        return 2
-
-    try:
-        report = check(payload)
-    except ValueError as error:
-        print(str(error), file=sys.stderr)
-        return 2
-
-    json.dump(report, sys.stdout, ensure_ascii=False, indent=2)
-    sys.stdout.write("\n")
-    return 0
+    return run_cli(check, __doc__, argv)
 
 
 if __name__ == "__main__":

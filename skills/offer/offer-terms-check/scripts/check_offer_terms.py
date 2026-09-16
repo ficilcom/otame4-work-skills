@@ -9,13 +9,19 @@
 
 from __future__ import annotations
 
-import argparse
-import json
-import re
-import sys
-from datetime import date
-from pathlib import Path
 from typing import Any
+
+from _common import (
+    flag_collector,
+    optional_amount,
+    optional_bool,
+    optional_date,
+    require_list,
+    require_object,
+    require_text,
+    run_cli,
+    strip_whitespace,
+)
 
 
 ITEM_STATUSES = ("stated", "missing", "unclear", "unknown")
@@ -108,66 +114,15 @@ CHECKLIST: tuple[tuple[str, str, str, str], ...] = (
 CHECKLIST_CODES = {code for code, _, _, _ in CHECKLIST}
 
 
-def _require_object(value: object, path: str) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        raise ValueError(f"{path} must be an object")
-    return value
-
-
-def _require_list(value: object, path: str) -> list[Any]:
-    if not isinstance(value, list):
-        raise ValueError(f"{path} must be a list")
-    return value
-
-
-def _require_text(value: object, path: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{path} must be a non-empty string")
-    return value.strip()
-
-
-def _optional_bool(value: object, path: str) -> bool | None:
-    if value is None:
-        return None
-    if not isinstance(value, bool):
-        raise ValueError(f"{path} must be a boolean or null")
-    return value
-
-
-def _optional_date(value: object, path: str) -> date | None:
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        raise ValueError(f"{path} must be an ISO date string (YYYY-MM-DD) or null")
-    try:
-        return date.fromisoformat(value)
-    except ValueError as error:
-        raise ValueError(f"{path} is not an ISO date (YYYY-MM-DD): {error}") from error
-
-
-def _optional_amount(value: object, path: str) -> int | None:
-    if value is None:
-        return None
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise ValueError(f"{path} must be a number or null")
-    if value < 0:
-        raise ValueError(f"{path} must not be negative")
-    return int(value)
-
-
-def _normalize(text: str) -> str:
-    return re.sub(r"\s+", "", text)
-
-
 def parse_document(raw: object) -> dict[str, Any]:
-    document = _require_object(raw if raw is not None else {}, "document")
+    document = require_object(raw if raw is not None else {}, "document")
     kind = document.get("kind", "unknown")
     if kind not in DOCUMENT_KINDS:
         raise ValueError(f"document.kind must be one of {list(DOCUMENT_KINDS)}")
     form = document.get("form", "unknown")
     if form not in DOCUMENT_FORMS:
         raise ValueError(f"document.form must be one of {list(DOCUMENT_FORMS)}")
-    received = _optional_date(document.get("received_date"), "document.received_date")
+    received = optional_date(document.get("received_date"), "document.received_date")
     return {
         "kind": kind,
         "form": form,
@@ -177,37 +132,37 @@ def parse_document(raw: object) -> dict[str, Any]:
 
 
 def parse_contract(raw: object) -> dict[str, Any]:
-    contract = _require_object(raw if raw is not None else {}, "contract")
+    contract = require_object(raw if raw is not None else {}, "contract")
     contract_type = contract.get("type", "unknown")
     if contract_type not in CONTRACT_TYPES:
         raise ValueError(f"contract.type must be one of {list(CONTRACT_TYPES)}")
     return {
         "type": contract_type,
-        "shift_work": _optional_bool(contract.get("shift_work"), "contract.shift_work"),
-        "part_time_or_fixed_term": _optional_bool(
+        "shift_work": optional_bool(contract.get("shift_work"), "contract.shift_work"),
+        "part_time_or_fixed_term": optional_bool(
             contract.get("part_time_or_fixed_term"), "contract.part_time_or_fixed_term"
         ),
-        "conversion_applicable": _optional_bool(
+        "conversion_applicable": optional_bool(
             contract.get("conversion_applicable"), "contract.conversion_applicable"
         ),
     }
 
 
 def parse_offer(raw: object) -> dict[str, Any]:
-    offer = _require_object(raw if raw is not None else {}, "offer")
-    offer_date = _optional_date(offer.get("offer_date"), "offer.offer_date")
-    deadline = _optional_date(offer.get("acceptance_deadline"), "offer.acceptance_deadline")
+    offer = require_object(raw if raw is not None else {}, "offer")
+    offer_date = optional_date(offer.get("offer_date"), "offer.offer_date")
+    deadline = optional_date(offer.get("acceptance_deadline"), "offer.acceptance_deadline")
     if offer_date is not None and deadline is not None and deadline < offer_date:
         raise ValueError("offer.acceptance_deadline must not precede offer.offer_date")
     return {"offer_date": offer_date, "acceptance_deadline": deadline}
 
 
 def parse_items(raw: object) -> dict[str, dict[str, Any]]:
-    entries = _require_list(raw if raw is not None else [], "items")
+    entries = require_list(raw if raw is not None else [], "items")
     parsed: dict[str, dict[str, Any]] = {}
     for index, entry in enumerate(entries):
-        item = _require_object(entry, f"items[{index}]")
-        code = _require_text(item.get("code"), f"items[{index}].code")
+        item = require_object(entry, f"items[{index}]")
+        code = require_text(item.get("code"), f"items[{index}].code")
         if code not in CHECKLIST_CODES:
             raise ValueError(f"items[{index}].code is not a known checklist code: {code!r}")
         if code in parsed:
@@ -224,7 +179,7 @@ def parse_items(raw: object) -> dict[str, dict[str, Any]]:
         parsed[code] = {
             "status": status,
             "source": source,
-            "applicable": _optional_bool(item.get("applicable"), f"items[{index}].applicable"),
+            "applicable": optional_bool(item.get("applicable"), f"items[{index}].applicable"),
             "note": note.strip() if isinstance(note, str) else None,
         }
     return parsed
@@ -288,27 +243,27 @@ def build_items(contract: dict[str, Any], provided: dict[str, dict[str, Any]]) -
 
 
 def parse_comparisons(raw: object) -> list[dict[str, Any]]:
-    entries = _require_list(raw if raw is not None else [], "comparisons")
+    entries = require_list(raw if raw is not None else [], "comparisons")
     parsed = []
     for index, entry in enumerate(entries):
-        item = _require_object(entry, f"comparisons[{index}]")
-        topic = _require_text(item.get("topic"), f"comparisons[{index}].topic")
-        values_raw = _require_object(item.get("values", {}), f"comparisons[{index}].values")
+        item = require_object(entry, f"comparisons[{index}]")
+        topic = require_text(item.get("topic"), f"comparisons[{index}].topic")
+        values_raw = require_object(item.get("values", {}), f"comparisons[{index}].values")
         values: dict[str, str] = {}
         for source, value in values_raw.items():
             if source not in SOURCES:
                 raise ValueError(
                     f"comparisons[{index}].values has an unknown source {source!r}"
                 )
-            values[source] = _require_text(value, f"comparisons[{index}].values.{source}")
-        amounts_raw = _require_object(item.get("amounts", {}), f"comparisons[{index}].amounts")
+            values[source] = require_text(value, f"comparisons[{index}].values.{source}")
+        amounts_raw = require_object(item.get("amounts", {}), f"comparisons[{index}].amounts")
         amounts: dict[str, int] = {}
         for source, value in amounts_raw.items():
             if source not in SOURCES:
                 raise ValueError(
                     f"comparisons[{index}].amounts has an unknown source {source!r}"
                 )
-            amount = _optional_amount(value, f"comparisons[{index}].amounts.{source}")
+            amount = optional_amount(value, f"comparisons[{index}].amounts.{source}")
             if amount is not None:
                 amounts[source] = amount
         parsed.append(evaluate_comparison(topic, values, amounts))
@@ -323,7 +278,7 @@ def evaluate_comparison(
 
     if len(values) < 2:
         verdict = "insufficient"
-    elif len({_normalize(text) for text in values.values()}) > 1:
+    elif len({strip_whitespace(text) for text in values.values()}) > 1:
         verdict = "different"
     else:
         verdict = "consistent"
@@ -381,13 +336,7 @@ def collect_flags(
     comparisons: list[dict[str, Any]],
     acceptance: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    flags: list[dict[str, Any]] = []
-
-    def add(code: str, message: str, codes: list[str] | None = None) -> None:
-        flag: dict[str, Any] = {"code": code, "message": message}
-        if codes:
-            flag["items"] = codes
-        flags.append(flag)
+    flags, add = flag_collector()
 
     if not document["is_written"]:
         add(
@@ -500,8 +449,8 @@ def collect_flags(
 
 
 def check(payload: object) -> dict[str, Any]:
-    data = _require_object(payload, "input")
-    employer = _require_text(data.get("employer"), "employer")
+    data = require_object(payload, "input")
+    employer = require_text(data.get("employer"), "employer")
 
     document = parse_document(data.get("document"))
     contract = parse_contract(data.get("contract"))
@@ -524,9 +473,9 @@ def check(payload: object) -> dict[str, Any]:
     }
 
     open_questions = [
-        _require_text(question, f"open_questions[{index}]")
+        require_text(question, f"open_questions[{index}]")
         for index, question in enumerate(
-            _require_list(data.get("open_questions", []), "open_questions")
+            require_list(data.get("open_questions", []), "open_questions")
         )
     ]
 
@@ -552,26 +501,7 @@ def check(payload: object) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("input", nargs="?", help="入力JSONのパス。省略した場合は標準入力から読む")
-    args = parser.parse_args(argv)
-
-    raw = Path(args.input).read_text(encoding="utf-8") if args.input else sys.stdin.read()
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError as error:
-        print(f"input is not valid JSON: {error}", file=sys.stderr)
-        return 2
-
-    try:
-        report = check(payload)
-    except ValueError as error:
-        print(str(error), file=sys.stderr)
-        return 2
-
-    json.dump(report, sys.stdout, ensure_ascii=False, indent=2)
-    sys.stdout.write("\n")
-    return 0
+    return run_cli(check, __doc__, argv)
 
 
 if __name__ == "__main__":

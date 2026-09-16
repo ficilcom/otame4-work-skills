@@ -172,6 +172,32 @@ def validate_marketplace(skill_files: list[Path]) -> list[str]:
     return problems
 
 
+def validate_vendored_common() -> list[str]:
+    """各スキルに配った _common.py が scripts/_common_source.py と一致するか調べる。
+
+    スキルは単独でインストールされ、リポジトリ共通のモジュールは利用者の環境へ
+    届かない。同一の内容を配るしかないため、ズレをここで落とす。
+    """
+    try:
+        from sync_common import VENDORED_NAME, render, target_dirs
+    except ImportError as error:  # pragma: no cover - 配置が壊れているときだけ
+        return [f"scripts/sync_common.py could not be imported: {error}"]
+
+    expected = render()
+    problems: list[str] = []
+    for script_dir in target_dirs():
+        destination = script_dir / VENDORED_NAME
+        relative = destination.relative_to(ROOT)
+        if not destination.exists():
+            problems.append(f"{relative}: missing; run `python3 scripts/sync_common.py`")
+        elif destination.read_text(encoding="utf-8") != expected:
+            problems.append(
+                f"{relative}: out of sync with scripts/_common_source.py; "
+                "run `python3 scripts/sync_common.py` and commit the result"
+            )
+    return problems
+
+
 def main() -> int:
     skill_files = sorted(SKILLS_DIR.glob("**/SKILL.md")) if SKILLS_DIR.exists() else []
     problems: list[str] = []
@@ -201,6 +227,7 @@ def main() -> int:
             )
 
     problems.extend(validate_marketplace(skill_files))
+    problems.extend(validate_vendored_common())
 
     if problems:
         print("Skill validation failed:", file=sys.stderr)

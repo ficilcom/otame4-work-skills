@@ -1,17 +1,16 @@
-import importlib.util
 import json
-import subprocess
 import sys
 import unittest
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-ROOT = Path(__file__).resolve().parents[3]
-SCRIPT = ROOT / "skills/research/job-posting-analysis/scripts/analyze_job_posting.py"
-SPEC = importlib.util.spec_from_file_location("analyze_job_posting", SCRIPT)
-MODULE = importlib.util.module_from_spec(SPEC)
-assert SPEC.loader is not None
-SPEC.loader.exec_module(MODULE)
+from _loader import load_script, run_script, script_path  # noqa: E402
+
+
+SCRIPT_PATH = "skills/research/job-posting-analysis/scripts/analyze_job_posting.py"
+SCRIPT = script_path(SCRIPT_PATH)
+MODULE = load_script(SCRIPT_PATH)
 
 
 def compensation(**overrides):
@@ -225,13 +224,7 @@ class ValidationTest(unittest.TestCase):
 
 class CommandLineTest(unittest.TestCase):
     def test_stdin_round_trip(self):
-        completed = subprocess.run(
-            [sys.executable, str(SCRIPT)],
-            input=json.dumps(posting(), ensure_ascii=False),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        completed = run_script(SCRIPT, posting())
         self.assertEqual(completed.returncode, 0)
         self.assertEqual(
             json.loads(completed.stdout)["pay"]["base_annual_min_excluding_fixed_overtime"],
@@ -239,13 +232,7 @@ class CommandLineTest(unittest.TestCase):
         )
 
     def test_invalid_payload_exits_with_two(self):
-        completed = subprocess.run(
-            [sys.executable, str(SCRIPT)],
-            input=json.dumps({"title": ""}),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        completed = run_script(SCRIPT, {"title": ""})
         self.assertEqual(completed.returncode, 2)
 
 

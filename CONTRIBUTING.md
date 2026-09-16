@@ -42,6 +42,8 @@ skills.shの表示設定は、デフォルトブランチへの反映後、テ�
 - 入力、前提、判断基準、成果物を明示する。
 - `trial` は単独で使える相談・原稿作成・運用準備として作り、外部操作は本人に残す。未経験者への無償体験は見学・学習・模擬課題を候補にし、企業の実務は経験にかかわらず有償枠を提案する。有償業務では作業量、実働時間と実施期間、報酬、支援、変更条件を明示する。
 - `SKILL.md` は簡潔に保ち、条件分岐は `references/`、決定的な計算は `scripts/`、出力雛形は `assets/` に置く。同じ内容を両方に書かない。
+- スクリプトでは入力検証とCLIの定型を書き直さず、同梱の `_common.py` から使う（`require_object`、`require_text`、`optional_date`、`flag_collector`、`run_cli` など）。何を欠落とみなすか、どの条件を注意として出すかはスキル固有の判断なので、各スクリプトに残す。
+- 前後の空白に意味がある入力（応募書類の本文など）には `require_text` ではなく `require_raw_text` を使う。`require_text` は strip するため、提出時の文字数と判定がずれる。
 
 ## キャリア支援としての品質
 
@@ -73,6 +75,25 @@ python3 scripts/run_tests.py
 ```
 
 決定的なスクリプトのテストは `tests/<category>/<skill-name>/` に置く。インストール対象のスキルディレクトリ内には置かない（検証スクリプトが落とす）。
+
+テストからスクリプトを読むときは `tests/_loader.py` を使う。
+
+```python
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from _loader import load_script, run_script, script_path  # noqa: E402
+
+SCRIPT_PATH = "skills/<category>/<skill-name>/scripts/<name>.py"
+SCRIPT = script_path(SCRIPT_PATH)
+MODULE = load_script(SCRIPT_PATH)
+```
+
+`importlib` を直接使うとスクリプトのディレクトリが `sys.path` に載らず、同梱の `_common.py` を import できない。CLIとしての挙動は `run_script(SCRIPT, payload)` で確かめる。
+
+`_common.py` を変更したいときは `scripts/_common_source.py` を編集し、`python3 scripts/sync_common.py` で各スキルへ配り直してからコミットする。
 
 ## レビュー時の確認
 

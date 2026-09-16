@@ -1,18 +1,17 @@
-import importlib.util
 import json
-import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-ROOT = Path(__file__).resolve().parents[3]
-SCRIPT = ROOT / "skills/documents/entry-sheet-review/scripts/check_entry_sheet.py"
-SPEC = importlib.util.spec_from_file_location("check_entry_sheet", SCRIPT)
-MODULE = importlib.util.module_from_spec(SPEC)
-assert SPEC.loader is not None
-SPEC.loader.exec_module(MODULE)
+from _loader import load_script, run_script, script_path  # noqa: E402
+
+
+SCRIPT_PATH = "skills/documents/entry-sheet-review/scripts/check_entry_sheet.py"
+SCRIPT = script_path(SCRIPT_PATH)
+MODULE = load_script(SCRIPT_PATH)
 
 
 def document(answer, **overrides):
@@ -225,43 +224,20 @@ class CommandLineTest(unittest.TestCase):
             path.write_text(
                 json.dumps(payload(document("あ" * 90)), ensure_ascii=False), encoding="utf-8"
             )
-            completed = subprocess.run(
-                [sys.executable, str(SCRIPT), str(path)],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
+            completed = run_script(SCRIPT, argv=(str(path),))
         self.assertEqual(completed.returncode, 0)
         self.assertEqual(json.loads(completed.stdout)["document_count"], 1)
 
     def test_reads_stdin(self):
-        completed = subprocess.run(
-            [sys.executable, str(SCRIPT)],
-            input=json.dumps(payload(document("あ" * 90)), ensure_ascii=False),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        completed = run_script(SCRIPT, payload(document("あ" * 90)))
         self.assertEqual(completed.returncode, 0)
 
     def test_invalid_json_exits_with_two(self):
-        completed = subprocess.run(
-            [sys.executable, str(SCRIPT)],
-            input="{not json",
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        completed = run_script(SCRIPT, raw="{not json")
         self.assertEqual(completed.returncode, 2)
 
     def test_invalid_payload_exits_with_two(self):
-        completed = subprocess.run(
-            [sys.executable, str(SCRIPT)],
-            input=json.dumps({"documents": []}),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        completed = run_script(SCRIPT, {"documents": []})
         self.assertEqual(completed.returncode, 2)
 
 

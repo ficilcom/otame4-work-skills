@@ -1,17 +1,16 @@
-import importlib.util
 import json
-import subprocess
 import sys
 import unittest
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-ROOT = Path(__file__).resolve().parents[3]
-SCRIPT = ROOT / "skills/research/company-research/scripts/check_source_coverage.py"
-SPEC = importlib.util.spec_from_file_location("check_source_coverage", SCRIPT)
-MODULE = importlib.util.module_from_spec(SPEC)
-assert SPEC.loader is not None
-SPEC.loader.exec_module(MODULE)
+from _loader import load_script, run_script, script_path  # noqa: E402
+
+
+SCRIPT_PATH = "skills/research/company-research/scripts/check_source_coverage.py"
+SCRIPT = script_path(SCRIPT_PATH)
+MODULE = load_script(SCRIPT_PATH)
 
 AS_OF = "2026-08-28"
 
@@ -213,24 +212,12 @@ class NotesTest(unittest.TestCase):
 
 class CommandLineTest(unittest.TestCase):
     def test_stdin_round_trip(self):
-        completed = subprocess.run(
-            [sys.executable, str(SCRIPT)],
-            input=json.dumps(payload(claim()), ensure_ascii=False),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        completed = run_script(SCRIPT, payload(claim()))
         self.assertEqual(completed.returncode, 0)
         self.assertEqual(json.loads(completed.stdout)["claim_count"], 1)
 
     def test_invalid_payload_exits_with_two(self):
-        completed = subprocess.run(
-            [sys.executable, str(SCRIPT)],
-            input=json.dumps({"company": "x", "as_of": AS_OF, "claims": []}),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        completed = run_script(SCRIPT, {"company": "x", "as_of": AS_OF, "claims": []})
         self.assertEqual(completed.returncode, 2)
 
 

@@ -1,17 +1,16 @@
-import importlib.util
 import json
-import subprocess
 import sys
 import unittest
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-ROOT = Path(__file__).resolve().parents[3]
-SCRIPT = ROOT / "skills/career/job-hunting-axis/scripts/check_axis.py"
-SPEC = importlib.util.spec_from_file_location("check_axis", SCRIPT)
-MODULE = importlib.util.module_from_spec(SPEC)
-assert SPEC.loader is not None
-SPEC.loader.exec_module(MODULE)
+from _loader import load_script, run_script, script_path  # noqa: E402
+
+
+SCRIPT_PATH = "skills/career/job-hunting-axis/scripts/check_axis.py"
+SCRIPT = script_path(SCRIPT_PATH)
+MODULE = load_script(SCRIPT_PATH)
 
 
 def criterion(**overrides):
@@ -258,24 +257,12 @@ class InputValidationTest(unittest.TestCase):
 
 class CommandLineTest(unittest.TestCase):
     def test_stdin_round_trip(self):
-        completed = subprocess.run(
-            [sys.executable, str(SCRIPT)],
-            input=json.dumps(axis(), ensure_ascii=False),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        completed = run_script(SCRIPT, axis())
         self.assertEqual(completed.returncode, 0)
         self.assertEqual(json.loads(completed.stdout)["summary"]["criteria"], 2)
 
     def test_invalid_payload_exits_with_two(self):
-        completed = subprocess.run(
-            [sys.executable, str(SCRIPT)],
-            input=json.dumps({"criteria": [{"id": "a1"}]}),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        completed = run_script(SCRIPT, {"criteria": [{"id": "a1"}]})
         self.assertEqual(completed.returncode, 2)
 
 

@@ -8,12 +8,19 @@
 
 from __future__ import annotations
 
-import argparse
-import json
-import sys
 from datetime import date
-from pathlib import Path
 from typing import Any
+
+from _common import (
+    flag_collector,
+    optional_bool,
+    optional_date,
+    optional_text,
+    require_list,
+    require_object,
+    require_text,
+    run_cli,
+)
 
 
 # 辞退の段階。実務上も重みも別物なので、まとめて扱わない。
@@ -30,71 +37,28 @@ ROUTE_EXTRA_CONTACT = {
 DEADLINE_SOON_DAYS = 2
 
 
-def _require_object(value: object, path: str) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        raise ValueError(f"{path} must be an object")
-    return value
-
-
-def _require_list(value: object, path: str) -> list[Any]:
-    if not isinstance(value, list):
-        raise ValueError(f"{path} must be a list")
-    return value
-
-
-def _require_text(value: object, path: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{path} must be a non-empty string")
-    return value.strip()
-
-
-def _optional_text(value: object, path: str) -> str | None:
-    if value is None:
-        return None
-    return _require_text(value, path)
-
-
-def _optional_bool(value: object, path: str) -> bool | None:
-    if value is None:
-        return None
-    if not isinstance(value, bool):
-        raise ValueError(f"{path} must be a boolean or null")
-    return value
-
-
-def _optional_date(value: object, path: str) -> date | None:
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        raise ValueError(f"{path} must be an ISO date string (YYYY-MM-DD) or null")
-    try:
-        return date.fromisoformat(value)
-    except ValueError as error:
-        raise ValueError(f"{path} is not an ISO date (YYYY-MM-DD): {error}") from error
-
-
 def parse_accepting(raw: object) -> dict[str, Any]:
     if raw is None:
         return {"company": None, "accepted": None, "terms_in_writing": None, "start_date": None}
-    accepting = _require_object(raw, "accepting")
+    accepting = require_object(raw, "accepting")
     return {
-        "company": _optional_text(accepting.get("company"), "accepting.company"),
-        "accepted": _optional_bool(accepting.get("accepted"), "accepting.accepted"),
-        "terms_in_writing": _optional_bool(
+        "company": optional_text(accepting.get("company"), "accepting.company"),
+        "accepted": optional_bool(accepting.get("accepted"), "accepting.accepted"),
+        "terms_in_writing": optional_bool(
             accepting.get("terms_in_writing"), "accepting.terms_in_writing"
         ),
-        "start_date": _optional_date(accepting.get("start_date"), "accepting.start_date"),
+        "start_date": optional_date(accepting.get("start_date"), "accepting.start_date"),
     }
 
 
 def parse_declining(raw: object) -> list[dict[str, Any]]:
-    entries = _require_list(raw if raw is not None else [], "declining")
+    entries = require_list(raw if raw is not None else [], "declining")
     declining = []
     seen: set[str] = set()
     for index, entry in enumerate(entries):
         path = f"declining[{index}]"
-        item = _require_object(entry, path)
-        decline_id = _require_text(item.get("id"), f"{path}.id")
+        item = require_object(entry, path)
+        decline_id = require_text(item.get("id"), f"{path}.id")
         if decline_id in seen:
             raise ValueError(f"{path}.id is duplicated: {decline_id!r}")
         seen.add(decline_id)
@@ -106,7 +70,7 @@ def parse_declining(raw: object) -> list[dict[str, Any]]:
         if route not in ROUTES:
             raise ValueError(f"{path}.route must be one of {list(ROUTES)}")
 
-        loose = _require_object(item.get("loose_ends", {}), f"{path}.loose_ends")
+        loose = require_object(item.get("loose_ends", {}), f"{path}.loose_ends")
         for key in loose:
             if key not in ("documents_held", "expenses_unsettled", "items_borrowed"):
                 raise ValueError(f"{path}.loose_ends has an unknown field: {key!r}")
@@ -114,12 +78,12 @@ def parse_declining(raw: object) -> list[dict[str, Any]]:
         declining.append(
             {
                 "id": decline_id,
-                "company": _require_text(item.get("company"), f"{path}.company"),
+                "company": require_text(item.get("company"), f"{path}.company"),
                 "stage": stage,
                 "route": route,
-                "deadline": _optional_date(item.get("deadline"), f"{path}.deadline"),
+                "deadline": optional_date(item.get("deadline"), f"{path}.deadline"),
                 "notice_sent": bool(item.get("notice_sent", False)),
-                "contacted_person": _optional_text(
+                "contacted_person": optional_text(
                     item.get("contacted_person"), f"{path}.contacted_person"
                 ),
                 "loose_ends": {
@@ -155,13 +119,7 @@ def collect_flags(
     declining: list[dict[str, Any]],
     described: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    flags: list[dict[str, Any]] = []
-
-    def add(code: str, message: str, items: list[str] | None = None) -> None:
-        flag: dict[str, Any] = {"code": code, "message": message}
-        if items:
-            flag["items"] = items
-        flags.append(flag)
+    flags, add = flag_collector()
 
     if not declining:
         add("nothing_to_decline", "辞退の対象が取り込まれていない")
@@ -249,8 +207,8 @@ def collect_flags(
 
 
 def check(payload: object) -> dict[str, Any]:
-    data = _require_object(payload, "input")
-    as_of = _optional_date(data.get("as_of"), "as_of")
+    data = require_object(payload, "input")
+    as_of = optional_date(data.get("as_of"), "as_of")
     accepting = parse_accepting(data.get("accepting"))
     declining = parse_declining(data.get("declining"))
     described = [describe(entry, as_of) for entry in declining]
@@ -286,26 +244,7 @@ def check(payload: object) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("input", nargs="?", help="入力JSONのパス。省略した場合は標準入力から読む")
-    args = parser.parse_args(argv)
-
-    raw = Path(args.input).read_text(encoding="utf-8") if args.input else sys.stdin.read()
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError as error:
-        print(f"input is not valid JSON: {error}", file=sys.stderr)
-        return 2
-
-    try:
-        report = check(payload)
-    except ValueError as error:
-        print(str(error), file=sys.stderr)
-        return 2
-
-    json.dump(report, sys.stdout, ensure_ascii=False, indent=2)
-    sys.stdout.write("\n")
-    return 0
+    return run_cli(check, __doc__, argv)
 
 
 if __name__ == "__main__":

@@ -7,12 +7,16 @@
 
 from __future__ import annotations
 
-import argparse
-import json
 import re
-import sys
-from pathlib import Path
 from typing import Any
+
+from _common import (
+    optional_positive_int,
+    require_list,
+    require_object,
+    require_raw_text,
+    run_cli,
+)
 
 
 COUNT_RULES = ("with_whitespace", "without_whitespace")
@@ -53,38 +57,6 @@ PERSONAL_DATA_PATTERNS: tuple[tuple[str, str, re.Pattern[str]], ...] = (
     ("phone", "電話番号", PHONE_PATTERN),
     ("my_number", "マイナンバーらしき12桁の数字", MYNUMBER_PATTERN),
 )
-
-
-def _require_object(value: object, path: str) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        raise ValueError(f"{path} must be an object")
-    return value
-
-
-def _require_list(value: object, path: str) -> list[Any]:
-    if not isinstance(value, list):
-        raise ValueError(f"{path} must be a list")
-    return value
-
-
-def _require_text(value: object, path: str) -> str:
-    """空でないことだけを確かめ、値は原文のまま返す。
-
-    他のスキルの同名ヘルパーと違い、ここでは strip しない。前後の空白も
-    提出時の文字数に含まれるため、削ると count_characters の結果が変わり、
-    上限の判定が実際の提出内容とずれる。共通化するときも strip しない。
-    """
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{path} must be a non-empty string")
-    return value
-
-
-def _optional_positive_int(value: object, path: str) -> int | None:
-    if value is None:
-        return None
-    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
-        raise ValueError(f"{path} must be a positive integer or null")
-    return value
 
 
 def count_characters(answer: str) -> dict[str, int]:
@@ -136,17 +108,17 @@ def find_personal_data(answer: str) -> list[dict[str, Any]]:
 
 
 def analyze_document(raw: object, index: int, count_rule: str) -> dict[str, Any]:
-    document = _require_object(raw, f"documents[{index}]")
+    document = require_object(raw, f"documents[{index}]")
     identifier = str(document.get("id") or f"documents[{index}]")
-    question = _require_text(document.get("question"), f"documents[{index}].question")
+    question = require_raw_text(document.get("question"), f"documents[{index}].question")
     answer = document.get("answer")
     if not isinstance(answer, str):
         raise ValueError(f"documents[{index}].answer must be a string")
 
-    limit_chars = _optional_positive_int(
+    limit_chars = optional_positive_int(
         document.get("limit_chars"), f"documents[{index}].limit_chars"
     )
-    min_chars = _optional_positive_int(document.get("min_chars"), f"documents[{index}].min_chars")
+    min_chars = optional_positive_int(document.get("min_chars"), f"documents[{index}].min_chars")
     if min_chars is None and limit_chars is not None:
         min_chars = int(limit_chars * DEFAULT_MIN_RATIO)
     if limit_chars is not None and min_chars is not None and min_chars > limit_chars:
@@ -226,13 +198,13 @@ def analyze_document(raw: object, index: int, count_rule: str) -> dict[str, Any]
 
 
 def analyze(payload: object) -> dict[str, Any]:
-    data = _require_object(payload, "input")
+    data = require_object(payload, "input")
     count_rule = data.get("count_rule", "with_whitespace")
     if count_rule not in COUNT_RULES:
         raise ValueError(f"count_rule must be one of {COUNT_RULES}")
     count_rule_confirmed = bool(data.get("count_rule_confirmed", False))
 
-    documents = _require_list(data.get("documents"), "documents")
+    documents = require_list(data.get("documents"), "documents")
     if not documents:
         raise ValueError("documents must contain at least one entry")
 
@@ -261,30 +233,7 @@ def analyze(payload: object) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "input",
-        nargs="?",
-        help="入力JSONのパス。省略した場合は標準入力から読む",
-    )
-    args = parser.parse_args(argv)
-
-    raw = Path(args.input).read_text(encoding="utf-8") if args.input else sys.stdin.read()
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError as error:
-        print(f"input is not valid JSON: {error}", file=sys.stderr)
-        return 2
-
-    try:
-        report = analyze(payload)
-    except ValueError as error:
-        print(str(error), file=sys.stderr)
-        return 2
-
-    json.dump(report, sys.stdout, ensure_ascii=False, indent=2)
-    sys.stdout.write("\n")
-    return 0
+    return run_cli(analyze, __doc__, argv)
 
 
 if __name__ == "__main__":
