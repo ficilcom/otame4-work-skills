@@ -8,13 +8,19 @@
 
 from __future__ import annotations
 
-import argparse
-import json
-import re
-import sys
 from datetime import date
-from pathlib import Path
 from typing import Any
+
+from _common import (
+    flag_collector,
+    optional_date,
+    optional_text,
+    require_list,
+    require_object,
+    require_text,
+    run_cli,
+    strip_whitespace,
+)
 
 
 SENDERS = ("company", "agent", "platform", "unknown")
@@ -26,48 +32,9 @@ CONDITION_FIELDS = ("pay", "location", "employment_type", "duties")
 DEADLINE_SOON_DAYS = 3
 
 
-def _require_object(value: object, path: str) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        raise ValueError(f"{path} must be an object")
-    return value
-
-
-def _require_list(value: object, path: str) -> list[Any]:
-    if not isinstance(value, list):
-        raise ValueError(f"{path} must be a list")
-    return value
-
-
-def _require_text(value: object, path: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{path} must be a non-empty string")
-    return value.strip()
-
-
-def _optional_text(value: object, path: str) -> str | None:
-    if value is None:
-        return None
-    return _require_text(value, path)
-
-
-def _optional_date(value: object, path: str) -> date | None:
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        raise ValueError(f"{path} must be an ISO date string (YYYY-MM-DD) or null")
-    try:
-        return date.fromisoformat(value)
-    except ValueError as error:
-        raise ValueError(f"{path} is not an ISO date (YYYY-MM-DD): {error}") from error
-
-
-def _normalize(text: str) -> str:
-    return re.sub(r"\s+", "", text)
-
-
 def parse_scout(raw: object, index: int) -> dict[str, Any]:
     path = f"scouts[{index}]"
-    item = _require_object(raw, path)
+    item = require_object(raw, path)
 
     sender = item.get("from", "unknown")
     if sender not in SENDERS:
@@ -79,7 +46,7 @@ def parse_scout(raw: object, index: int) -> dict[str, Any]:
     if interest not in INTEREST_LEVELS:
         raise ValueError(f"{path}.user_interest must be one of {list(INTEREST_LEVELS)}")
 
-    conditions_raw = _require_object(item.get("conditions", {}), f"{path}.conditions")
+    conditions_raw = require_object(item.get("conditions", {}), f"{path}.conditions")
     conditions = {}
     for field in CONDITION_FIELDS:
         value = conditions_raw.get(field)
@@ -91,19 +58,19 @@ def parse_scout(raw: object, index: int) -> dict[str, Any]:
             raise ValueError(f"{path}.conditions has an unknown field: {key!r}")
 
     personalized = [
-        _require_text(reason, f"{path}.personalized[{position}]")
+        require_text(reason, f"{path}.personalized[{position}]")
         for position, reason in enumerate(
-            _require_list(item.get("personalized", []), f"{path}.personalized")
+            require_list(item.get("personalized", []), f"{path}.personalized")
         )
     ]
 
     return {
-        "id": _require_text(item.get("id"), f"{path}.id"),
+        "id": require_text(item.get("id"), f"{path}.id"),
         "from": sender,
-        "company": _optional_text(item.get("company"), f"{path}.company"),
-        "role": _optional_text(item.get("role"), f"{path}.role"),
-        "received": _optional_date(item.get("received"), f"{path}.received"),
-        "reply_deadline": _optional_date(item.get("reply_deadline"), f"{path}.reply_deadline"),
+        "company": optional_text(item.get("company"), f"{path}.company"),
+        "role": optional_text(item.get("role"), f"{path}.role"),
+        "received": optional_date(item.get("received"), f"{path}.received"),
+        "reply_deadline": optional_date(item.get("reply_deadline"), f"{path}.reply_deadline"),
         "conditions": conditions,
         "personalized": personalized,
         "pay_claim_type": pay_claim,
@@ -146,13 +113,7 @@ def describe(scout: dict[str, Any]) -> dict[str, Any]:
 def collect_flags(
     scouts: list[dict[str, Any]], described: list[dict[str, Any]], as_of: date | None
 ) -> list[dict[str, Any]]:
-    flags: list[dict[str, Any]] = []
-
-    def add(code: str, message: str, items: list[str] | None = None) -> None:
-        flag: dict[str, Any] = {"code": code, "message": message}
-        if items:
-            flag["items"] = items
-        flags.append(flag)
+    flags, add = flag_collector()
 
     if not scouts:
         add("scouts_not_captured", "スカウトが取り込まれていない")
@@ -204,7 +165,7 @@ def collect_flags(
     for scout in scouts:
         if scout["company"] is None:
             continue
-        seen.setdefault(_normalize(scout["company"]), []).append(scout["id"])
+        seen.setdefault(strip_whitespace(scout["company"]), []).append(scout["id"])
     duplicates = [ids for ids in seen.values() if len(ids) > 1]
     if duplicates:
         add(
@@ -243,10 +204,10 @@ def collect_flags(
 
 
 def triage(payload: object) -> dict[str, Any]:
-    data = _require_object(payload, "input")
-    as_of = _optional_date(data.get("as_of"), "as_of")
+    data = require_object(payload, "input")
+    as_of = optional_date(data.get("as_of"), "as_of")
 
-    raw_scouts = _require_list(data.get("scouts", []), "scouts")
+    raw_scouts = require_list(data.get("scouts", []), "scouts")
     scouts = []
     seen: set[str] = set()
     for index, raw in enumerate(raw_scouts):
@@ -284,26 +245,7 @@ def triage(payload: object) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("input", nargs="?", help="入力JSONのパス。省略した場合は標準入力から読む")
-    args = parser.parse_args(argv)
-
-    raw = Path(args.input).read_text(encoding="utf-8") if args.input else sys.stdin.read()
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError as error:
-        print(f"input is not valid JSON: {error}", file=sys.stderr)
-        return 2
-
-    try:
-        report = triage(payload)
-    except ValueError as error:
-        print(str(error), file=sys.stderr)
-        return 2
-
-    json.dump(report, sys.stdout, ensure_ascii=False, indent=2)
-    sys.stdout.write("\n")
-    return 0
+    return run_cli(triage, __doc__, argv)
 
 
 if __name__ == "__main__":

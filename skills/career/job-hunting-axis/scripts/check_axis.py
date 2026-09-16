@@ -8,11 +8,16 @@
 
 from __future__ import annotations
 
-import argparse
-import json
-import sys
-from pathlib import Path
 from typing import Any
+
+from _common import (
+    flag_collector,
+    optional_text,
+    require_list,
+    require_object,
+    require_text,
+    run_cli,
+)
 
 
 TRACKS = ("shinsotsu", "chuto")
@@ -31,38 +36,14 @@ ASSESSMENTS = ("met", "unmet", "unknown")
 UNKNOWN_RATIO_THRESHOLD = 0.5
 
 
-def _require_object(value: object, path: str) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        raise ValueError(f"{path} must be an object")
-    return value
-
-
-def _require_list(value: object, path: str) -> list[Any]:
-    if not isinstance(value, list):
-        raise ValueError(f"{path} must be a list")
-    return value
-
-
-def _require_text(value: object, path: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{path} must be a non-empty string")
-    return value.strip()
-
-
-def _optional_text(value: object, path: str) -> str | None:
-    if value is None:
-        return None
-    return _require_text(value, path)
-
-
 def parse_criteria(raw: object) -> list[dict[str, Any]]:
-    entries = _require_list(raw if raw is not None else [], "criteria")
+    entries = require_list(raw if raw is not None else [], "criteria")
     criteria = []
     seen: set[str] = set()
     for index, entry in enumerate(entries):
         path = f"criteria[{index}]"
-        item = _require_object(entry, path)
-        criterion_id = _require_text(item.get("id"), f"{path}.id")
+        item = require_object(entry, path)
+        criterion_id = require_text(item.get("id"), f"{path}.id")
         if criterion_id in seen:
             raise ValueError(f"{path}.id is duplicated: {criterion_id!r}")
         seen.add(criterion_id)
@@ -75,30 +56,30 @@ def parse_criteria(raw: object) -> list[dict[str, Any]]:
             raise ValueError(f"{path}.basis must be one of {list(BASES)}")
 
         observable = [
-            _require_text(way, f"{path}.observable[{position}]")
-            for position, way in enumerate(_require_list(item.get("observable", []), f"{path}.observable"))
+            require_text(way, f"{path}.observable[{position}]")
+            for position, way in enumerate(require_list(item.get("observable", []), f"{path}.observable"))
         ]
         criteria.append(
             {
                 "id": criterion_id,
-                "text": _require_text(item.get("text"), f"{path}.text"),
+                "text": require_text(item.get("text"), f"{path}.text"),
                 "kind": kind,
                 "basis": basis,
                 "basis_strength": BASIS_STRENGTH[basis],
                 "observable": observable,
-                "note": _optional_text(item.get("note"), f"{path}.note"),
+                "note": optional_text(item.get("note"), f"{path}.note"),
             }
         )
     return criteria
 
 
 def parse_tradeoffs(raw: object, criterion_ids: set[str]) -> list[dict[str, Any]]:
-    entries = _require_list(raw if raw is not None else [], "tradeoffs")
+    entries = require_list(raw if raw is not None else [], "tradeoffs")
     tradeoffs = []
     for index, entry in enumerate(entries):
         path = f"tradeoffs[{index}]"
-        item = _require_object(entry, path)
-        pair = _require_list(item.get("pair"), f"{path}.pair")
+        item = require_object(entry, path)
+        pair = require_list(item.get("pair"), f"{path}.pair")
         if len(pair) != 2:
             raise ValueError(f"{path}.pair must hold exactly two criterion ids")
         for position, value in enumerate(pair):
@@ -109,29 +90,29 @@ def parse_tradeoffs(raw: object, criterion_ids: set[str]) -> list[dict[str, Any]
         tradeoffs.append(
             {
                 "pair": [str(pair[0]), str(pair[1])],
-                "note": _optional_text(item.get("note"), f"{path}.note"),
+                "note": optional_text(item.get("note"), f"{path}.note"),
             }
         )
     return tradeoffs
 
 
 def parse_candidates(raw: object, criterion_ids: set[str]) -> list[dict[str, Any]]:
-    entries = _require_list(raw if raw is not None else [], "candidates")
+    entries = require_list(raw if raw is not None else [], "candidates")
     candidates = []
     seen: set[str] = set()
     for index, entry in enumerate(entries):
         path = f"candidates[{index}]"
-        item = _require_object(entry, path)
-        label = _require_text(item.get("label"), f"{path}.label")
+        item = require_object(entry, path)
+        label = require_text(item.get("label"), f"{path}.label")
         if label in seen:
             raise ValueError(f"{path}.label is duplicated: {label!r}")
         seen.add(label)
 
         assessment: dict[str, str] = {}
         for position, record in enumerate(
-            _require_list(item.get("assessment", []), f"{path}.assessment")
+            require_list(item.get("assessment", []), f"{path}.assessment")
         ):
-            block = _require_object(record, f"{path}.assessment[{position}]")
+            block = require_object(record, f"{path}.assessment[{position}]")
             criterion = block.get("criterion")
             if criterion not in criterion_ids:
                 raise ValueError(
@@ -185,13 +166,7 @@ def collect_flags(
     tradeoffs: list[dict[str, Any]],
     candidates: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    flags: list[dict[str, Any]] = []
-
-    def add(code: str, message: str, items: list[str] | None = None) -> None:
-        flag: dict[str, Any] = {"code": code, "message": message}
-        if items:
-            flag["items"] = items
-        flags.append(flag)
+    flags, add = flag_collector()
 
     if not criteria:
         add("criteria_not_captured", "選ぶ基準が取り込まれていない。突き合わせるものがない")
@@ -277,7 +252,7 @@ def collect_flags(
 
 
 def check(payload: object) -> dict[str, Any]:
-    data = _require_object(payload, "input")
+    data = require_object(payload, "input")
     track = data.get("track", "chuto")
     if track not in TRACKS:
         raise ValueError(f"track must be one of {list(TRACKS)}")
@@ -316,26 +291,7 @@ def check(payload: object) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("input", nargs="?", help="入力JSONのパス。省略した場合は標準入力から読む")
-    args = parser.parse_args(argv)
-
-    raw = Path(args.input).read_text(encoding="utf-8") if args.input else sys.stdin.read()
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError as error:
-        print(f"input is not valid JSON: {error}", file=sys.stderr)
-        return 2
-
-    try:
-        report = check(payload)
-    except ValueError as error:
-        print(str(error), file=sys.stderr)
-        return 2
-
-    json.dump(report, sys.stdout, ensure_ascii=False, indent=2)
-    sys.stdout.write("\n")
-    return 0
+    return run_cli(check, __doc__, argv)
 
 
 if __name__ == "__main__":

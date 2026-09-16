@@ -8,12 +8,20 @@
 
 from __future__ import annotations
 
-import argparse
-import json
-import sys
-from decimal import Decimal, ROUND_HALF_UP
-from pathlib import Path
+from decimal import Decimal
 from typing import Any
+
+from _common import (
+    flag_collector,
+    optional_bool,
+    optional_number,
+    optional_text,
+    require_list,
+    require_object,
+    require_text,
+    round_yen,
+    run_cli,
+)
 
 
 # 提示条件の出所。書面以外は比較に使う前に確認する必要がある。
@@ -32,7 +40,6 @@ MONTHLY_OVERTIME_REFERENCE_HOURS = Decimal(45)
 # 提示年収と内訳の合計がこれ以上ずれる場合、内訳が提示額を説明できていないとみなす。
 RECONCILE_TOLERANCE_RATIO = Decimal("0.01")
 RECONCILE_TOLERANCE_FLOOR = Decimal(10000)
-YEN = Decimal("1")
 MONTHS = Decimal(12)
 
 # (key, label, note)
@@ -54,66 +61,15 @@ HOURLY_METRICS: tuple[tuple[str, str, str], ...] = (
 )
 
 
-def _require_object(value: object, path: str) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        raise ValueError(f"{path} must be an object")
-    return value
-
-
-def _require_list(value: object, path: str) -> list[Any]:
-    if not isinstance(value, list):
-        raise ValueError(f"{path} must be a list")
-    return value
-
-
-def _require_text(value: object, path: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{path} must be a non-empty string")
-    return value.strip()
-
-
-def _optional_text(value: object, path: str) -> str | None:
-    if value is None:
-        return None
-    return _require_text(value, path)
-
-
-def _optional_bool(value: object, path: str) -> bool | None:
-    if value is None:
-        return None
-    if not isinstance(value, bool):
-        raise ValueError(f"{path} must be a boolean or null")
-    return value
-
-
-def _optional_number(value: object, path: str, *, allow_zero: bool = True) -> Decimal | None:
-    if value is None:
-        return None
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise ValueError(f"{path} must be a number or null")
-    number = Decimal(str(value))
-    if number < 0:
-        raise ValueError(f"{path} must not be negative")
-    if number == 0 and not allow_zero:
-        raise ValueError(f"{path} must be greater than zero")
-    return number
-
-
-def _round_yen(value: Decimal | None) -> int | None:
-    if value is None:
-        return None
-    return int(value.quantize(YEN, rounding=ROUND_HALF_UP))
-
-
 def parse_fixed_overtime(raw: object, path: str) -> dict[str, Any]:
     if raw is None:
         return {"disclosed": False, "monthly_amount": None, "hours": None, "included_in_annual": None}
-    block = _require_object(raw, path)
+    block = require_object(raw, path)
     return {
         "disclosed": True,
-        "monthly_amount": _optional_number(block.get("monthly_amount"), f"{path}.monthly_amount"),
-        "hours": _optional_number(block.get("hours"), f"{path}.hours"),
-        "included_in_annual": _optional_bool(
+        "monthly_amount": optional_number(block.get("monthly_amount"), f"{path}.monthly_amount"),
+        "hours": optional_number(block.get("hours"), f"{path}.hours"),
+        "included_in_annual": optional_bool(
             block.get("included_in_annual"), f"{path}.included_in_annual"
         ),
     }
@@ -122,12 +78,12 @@ def parse_fixed_overtime(raw: object, path: str) -> dict[str, Any]:
 def parse_bonus(raw: object, path: str) -> dict[str, Any]:
     if raw is None:
         return {"disclosed": False, "annual_amount": None, "guaranteed": None, "included_in_annual": None}
-    block = _require_object(raw, path)
+    block = require_object(raw, path)
     return {
         "disclosed": True,
-        "annual_amount": _optional_number(block.get("annual_amount"), f"{path}.annual_amount"),
-        "guaranteed": _optional_bool(block.get("guaranteed"), f"{path}.guaranteed"),
-        "included_in_annual": _optional_bool(
+        "annual_amount": optional_number(block.get("annual_amount"), f"{path}.annual_amount"),
+        "guaranteed": optional_bool(block.get("guaranteed"), f"{path}.guaranteed"),
+        "included_in_annual": optional_bool(
             block.get("included_in_annual"), f"{path}.included_in_annual"
         ),
     }
@@ -135,51 +91,51 @@ def parse_bonus(raw: object, path: str) -> dict[str, Any]:
 
 def parse_offer(raw: object, index: int) -> dict[str, Any]:
     path = f"offers[{index}]"
-    offer = _require_object(raw, path)
-    label = _require_text(offer.get("label"), f"{path}.label")
+    offer = require_object(raw, path)
+    label = require_text(offer.get("label"), f"{path}.label")
 
-    compensation = _require_object(offer.get("compensation", {}), f"{path}.compensation")
+    compensation = require_object(offer.get("compensation", {}), f"{path}.compensation")
     basis = compensation.get("basis", "unknown")
     if basis not in COMPENSATION_BASIS:
         raise ValueError(f"{path}.compensation.basis must be one of {list(COMPENSATION_BASIS)}")
 
-    components = _require_object(compensation.get("components", {}), f"{path}.compensation.components")
-    working = _require_object(offer.get("working_hours", {}), f"{path}.working_hours")
-    other = _require_object(offer.get("other", {}), f"{path}.other")
+    components = require_object(compensation.get("components", {}), f"{path}.compensation.components")
+    working = require_object(offer.get("working_hours", {}), f"{path}.working_hours")
+    other = require_object(offer.get("other", {}), f"{path}.other")
 
-    monthly_scheduled = _optional_number(
+    monthly_scheduled = optional_number(
         working.get("monthly_scheduled_hours"), f"{path}.working_hours.monthly_scheduled_hours", allow_zero=False
     )
     if monthly_scheduled is None:
-        daily = _optional_number(
+        daily = optional_number(
             working.get("daily_scheduled_hours"), f"{path}.working_hours.daily_scheduled_hours", allow_zero=False
         )
-        days = _optional_number(
+        days = optional_number(
             working.get("monthly_working_days"), f"{path}.working_hours.monthly_working_days", allow_zero=False
         )
         monthly_scheduled = daily * days if daily is not None and days is not None else None
 
     non_monetary = []
-    for position, entry in enumerate(_require_list(offer.get("non_monetary", []), f"{path}.non_monetary")):
-        item = _require_object(entry, f"{path}.non_monetary[{position}]")
+    for position, entry in enumerate(require_list(offer.get("non_monetary", []), f"{path}.non_monetary")):
+        item = require_object(entry, f"{path}.non_monetary[{position}]")
         non_monetary.append(
             {
-                "topic": _require_text(item.get("topic"), f"{path}.non_monetary[{position}].topic"),
-                "value": _require_text(item.get("value"), f"{path}.non_monetary[{position}].value"),
+                "topic": require_text(item.get("topic"), f"{path}.non_monetary[{position}].topic"),
+                "value": require_text(item.get("value"), f"{path}.non_monetary[{position}].value"),
             }
         )
 
     return {
         "label": label,
-        "employment_type": _optional_text(offer.get("employment_type"), f"{path}.employment_type"),
+        "employment_type": optional_text(offer.get("employment_type"), f"{path}.employment_type"),
         "basis": basis,
-        "stated_annual": _optional_number(
+        "stated_annual": optional_number(
             compensation.get("annual_total"), f"{path}.compensation.annual_total", allow_zero=False
         ),
-        "monthly_base": _optional_number(
+        "monthly_base": optional_number(
             components.get("monthly_base"), f"{path}.compensation.components.monthly_base", allow_zero=False
         ),
-        "fixed_allowances_monthly": _optional_number(
+        "fixed_allowances_monthly": optional_number(
             components.get("fixed_allowances_monthly"),
             f"{path}.compensation.components.fixed_allowances_monthly",
         ),
@@ -188,13 +144,13 @@ def parse_offer(raw: object, index: int) -> dict[str, Any]:
         ),
         "bonus": parse_bonus(components.get("bonus"), f"{path}.compensation.components.bonus"),
         "monthly_scheduled_hours": monthly_scheduled,
-        "commute_allowance_monthly": _optional_number(
+        "commute_allowance_monthly": optional_number(
             other.get("commute_allowance_monthly"), f"{path}.other.commute_allowance_monthly"
         ),
-        "housing_support_monthly": _optional_number(
+        "housing_support_monthly": optional_number(
             other.get("housing_support_monthly"), f"{path}.other.housing_support_monthly"
         ),
-        "retirement_plan": _optional_text(other.get("retirement_plan"), f"{path}.other.retirement_plan"),
+        "retirement_plan": optional_text(other.get("retirement_plan"), f"{path}.other.retirement_plan"),
         "non_monetary": non_monetary,
     }
 
@@ -264,8 +220,8 @@ def derive(offer: dict[str, Any]) -> dict[str, Any]:
         difference = computed_annual - stated
         tolerance = max(stated * RECONCILE_TOLERANCE_RATIO, RECONCILE_TOLERANCE_FLOOR)
         reconcile = {
-            "computed_annual": _round_yen(computed_annual),
-            "difference": _round_yen(difference),
+            "computed_annual": round_yen(computed_annual),
+            "difference": round_yen(difference),
             "within_tolerance": abs(difference) <= tolerance,
         }
 
@@ -295,7 +251,7 @@ def build_metric(key: str, label: str, note: str, rows: list[dict[str, Any]], *,
         if value is None:
             missing.append(row["label"])
         else:
-            values[row["label"]] = _round_yen(value) if money else float(value)
+            values[row["label"]] = round_yen(value) if money else float(value)
 
     metric: dict[str, Any] = {
         "key": key,
@@ -308,21 +264,15 @@ def build_metric(key: str, label: str, note: str, rows: list[dict[str, Any]], *,
     if metric["comparable"]:
         numbers = [Decimal(str(value)) for value in values.values()]
         low, high = min(numbers), max(numbers)
-        metric["min"] = _round_yen(low) if money else float(low)
-        metric["max"] = _round_yen(high) if money else float(high)
-        metric["spread"] = _round_yen(high - low) if money else float(high - low)
+        metric["min"] = round_yen(low) if money else float(low)
+        metric["max"] = round_yen(high) if money else float(high)
+        metric["spread"] = round_yen(high - low) if money else float(high - low)
         metric["spread_ratio"] = float((high / low).quantize(Decimal("0.01"))) if low > 0 else None
     return metric
 
 
 def collect_flags(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    flags: list[dict[str, Any]] = []
-
-    def add(code: str, message: str, offers: list[str] | None = None) -> None:
-        flag: dict[str, Any] = {"code": code, "message": message}
-        if offers:
-            flag["offers"] = offers
-        flags.append(flag)
+    flags, add = flag_collector("offers")
 
     if len(rows) < 2:
         add("single_offer", "内定が1件しかない。比較ではなく、その1件の分解として読む")
@@ -409,8 +359,8 @@ def collect_flags(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def compare(payload: object) -> dict[str, Any]:
-    data = _require_object(payload, "input")
-    raw_offers = _require_list(data.get("offers"), "offers")
+    data = require_object(payload, "input")
+    raw_offers = require_list(data.get("offers"), "offers")
     if not raw_offers:
         raise ValueError("offers must contain at least one offer")
 
@@ -440,7 +390,7 @@ def compare(payload: object) -> dict[str, Any]:
                 "basis": row["basis"],
                 "basis_is_written": row["basis"] in WRITTEN_BASIS,
                 "figures": {
-                    key: _round_yen(figures[key])
+                    key: round_yen(figures[key])
                     for key, _, _ in MONEY_METRICS
                 },
                 "fixed_overtime_hours": (
@@ -454,9 +404,9 @@ def compare(payload: object) -> dict[str, Any]:
                     if figures["assumed_annual_hours"] is not None
                     else None
                 ),
-                "hourly_stated": _round_yen(figures["hourly_stated"]),
-                "hourly_guaranteed": _round_yen(figures["hourly_guaranteed"]),
-                "commute_allowance_monthly": _round_yen(figures["commute_allowance_monthly"]),
+                "hourly_stated": round_yen(figures["hourly_stated"]),
+                "hourly_guaranteed": round_yen(figures["hourly_guaranteed"]),
+                "commute_allowance_monthly": round_yen(figures["commute_allowance_monthly"]),
                 "retirement_plan": row["retirement_plan"],
                 "reconcile": figures["reconcile"],
                 "non_monetary": row["non_monetary"],
@@ -483,26 +433,7 @@ def compare(payload: object) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("input", nargs="?", help="入力JSONのパス。省略した場合は標準入力から読む")
-    args = parser.parse_args(argv)
-
-    raw = Path(args.input).read_text(encoding="utf-8") if args.input else sys.stdin.read()
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError as error:
-        print(f"input is not valid JSON: {error}", file=sys.stderr)
-        return 2
-
-    try:
-        report = compare(payload)
-    except ValueError as error:
-        print(str(error), file=sys.stderr)
-        return 2
-
-    json.dump(report, sys.stdout, ensure_ascii=False, indent=2)
-    sys.stdout.write("\n")
-    return 0
+    return run_cli(compare, __doc__, argv)
 
 
 if __name__ == "__main__":

@@ -5,19 +5,11 @@ from __future__ import annotations
 
 import argparse
 import re
-from pathlib import Path
+
+from _repo import CATEGORIES, ROOT
 
 
 NAME_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-CATEGORIES = (
-    "career",
-    "documents",
-    "interview",
-    "research",
-    "offer",
-    "trial",
-)
-ROOT = Path(__file__).resolve().parents[1]
 
 TEMPLATE = """---
 name: {name}

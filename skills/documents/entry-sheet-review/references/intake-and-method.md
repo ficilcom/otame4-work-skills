@@ -73,3 +73,5 @@ python3 scripts/check_entry_sheet.py input.json
 ```
 
 出力の `length_status` は `ok` / `under_target` / `over_limit` / `unknown`、`redundant_phrase_candidates` は削減候補であって誤りの指摘ではない。
+
+`personal_data_in_body` は本文に混ざった個人情報を `kind`（`email` / `phone` / `my_number`）と件数で返す。**一致した文字列そのものは出力しない。** 削除を促すのに必要なのは種類と件数であり、値を報告に載せると個人情報を出力しないという方針に反するため。マイナンバーらしき数字が出た場合は、応募書類に書く場面がほぼないことを踏まえ、提出前の削除を確認する。

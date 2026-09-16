@@ -144,6 +144,7 @@ otame4-work-skills/
 │   │   └── <skill-name>/
 │   │       ├── SKILL.md      # 必須
 │   │       ├── scripts/      # 決定的な補助スクリプト（任意）
+│   │       │   └── _common.py  # 生成物。直接編集しない
 │   │       ├── references/   # 必要時に読む詳細（任意）
 │   │       └── assets/       # 出力雛形（任意）
 │   ├── interview/
@@ -151,14 +152,20 @@ otame4-work-skills/
 │   ├── offer/
 │   └── trial/
 ├── scripts/
+│   ├── _common_source.py     # 同梱 _common.py の唯一の編集点
+│   ├── sync_common.py        # 各スキルへ配る／--check で同期を検証
 │   ├── new_skill.py
 │   ├── run_tests.py
 │   └── validate_skills.py
 └── tests/
+    ├── _loader.py            # スクリプトを実行時と同じ条件で読む
+    ├── repository/
     └── <category>/
         └── <skill-name>/
             └── test_*.py
 ```
+
+スキルは `skills/<category>/<skill-name>/` を単位として単独でインストールされ、それより上の階層は利用者の環境に届かない。入力検証とCLIの定型はリポジトリ共通のモジュールにできないため、`scripts/_common_source.py` から各スキルへ同一の内容を配り、検証スクリプトが同期を確認する。
 
 スキルディレクトリはカテゴリの1階層下に置く。ディレクトリ名と `SKILL.md` の `name` は一致させる。
 
@@ -185,7 +192,13 @@ python3 scripts/new_skill.py interview interview-question-prep
 python3 scripts/validate_skills.py && python3 scripts/run_tests.py
 ```
 
-検証内容: フロントマターの必須項目、名前とディレクトリの一致、`PLACEHOLDER`/`TODO` の残留、`marketplace.json` との整合、そして**個人情報らしき文字列（メールアドレス、電話番号、12桁数字）の混入**。公開リポジトリなので、実在する求職者の応募書類やサンプルは絶対にコミットしない。
+検証内容: フロントマターの必須項目、名前とディレクトリの一致、`PLACEHOLDER`/`TODO` の残留、`marketplace.json` との整合、同梱 `_common.py` の同期、そして**個人情報らしき文字列（メールアドレス、電話番号、12桁数字）の混入**。公開リポジトリなので、実在する求職者の応募書類やサンプルは絶対にコミットしない。
+
+共通処理を変えたときは配り直す:
+
+```bash
+python3 scripts/sync_common.py
+```
 
 書き方の基準は [CONTRIBUTING.md](CONTRIBUTING.md)、リポジトリ運用は [AGENTS.md](AGENTS.md) を読む。
 

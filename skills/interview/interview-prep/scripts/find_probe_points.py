@@ -9,12 +9,17 @@
 
 from __future__ import annotations
 
-import argparse
-import json
-import re
-import sys
-from pathlib import Path
 from typing import Any
+
+from _common import (
+    flag_collector,
+    optional_bool,
+    optional_month_index,
+    require_list,
+    require_object,
+    require_text,
+    run_cli,
+)
 
 
 TRACKS = ("shinsotsu", "chuto")
@@ -25,7 +30,6 @@ REQUIREMENT_KINDS = ("must", "want")
 PREPARED_STATUSES = ("drafted", "outlined", "none")
 PRIORITIES = ("high", "medium", "low")
 
-MONTH_PATTERN = re.compile(r"^(\d{4})-(\d{2})$")
 # 在籍のない月がこれ以上続くと、理由を聞かれる前提で準備する。
 GAP_MONTHS_THRESHOLD = 3
 # 在籍期間がこれ未満だと、退職理由を掘られる前提で準備する。
@@ -70,53 +74,13 @@ PROBE_REASONS: dict[str, str] = {
 }
 
 
-def _require_object(value: object, path: str) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        raise ValueError(f"{path} must be an object")
-    return value
-
-
-def _require_list(value: object, path: str) -> list[Any]:
-    if not isinstance(value, list):
-        raise ValueError(f"{path} must be a list")
-    return value
-
-
-def _require_text(value: object, path: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{path} must be a non-empty string")
-    return value.strip()
-
-
-def _optional_bool(value: object, path: str) -> bool | None:
-    if value is None:
-        return None
-    if not isinstance(value, bool):
-        raise ValueError(f"{path} must be a boolean or null")
-    return value
-
-
-def _month_index(value: object, path: str) -> int | None:
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        raise ValueError(f"{path} must be a YYYY-MM string or null")
-    match = MONTH_PATTERN.match(value.strip())
-    if not match:
-        raise ValueError(f"{path} must look like YYYY-MM: {value!r}")
-    year, month = int(match.group(1)), int(match.group(2))
-    if not 1 <= month <= 12:
-        raise ValueError(f"{path} has a month outside 1-12: {value!r}")
-    return year * 12 + (month - 1)
-
-
 def parse_claims(raw: object) -> list[dict[str, Any]]:
-    entries = _require_list(raw if raw is not None else [], "claims")
+    entries = require_list(raw if raw is not None else [], "claims")
     claims = []
     seen: set[str] = set()
     for index, entry in enumerate(entries):
-        item = _require_object(entry, f"claims[{index}]")
-        claim_id = _require_text(item.get("id"), f"claims[{index}].id")
+        item = require_object(entry, f"claims[{index}]")
+        claim_id = require_text(item.get("id"), f"claims[{index}].id")
         if claim_id in seen:
             raise ValueError(f"claims[{index}].id is duplicated: {claim_id!r}")
         seen.add(claim_id)
@@ -129,18 +93,18 @@ def parse_claims(raw: object) -> list[dict[str, Any]]:
             raise ValueError(f"claims[{index}].role_stated must be one of {list(ROLE_STATEMENTS)}")
 
         metrics = [
-            _require_text(metric, f"claims[{index}].metrics[{position}]")
-            for position, metric in enumerate(_require_list(item.get("metrics", []), f"claims[{index}].metrics"))
+            require_text(metric, f"claims[{index}].metrics[{position}]")
+            for position, metric in enumerate(require_list(item.get("metrics", []), f"claims[{index}].metrics"))
         ]
         claims.append(
             {
                 "id": claim_id,
-                "topic": _require_text(item.get("topic"), f"claims[{index}].topic"),
+                "topic": require_text(item.get("topic"), f"claims[{index}].topic"),
                 "source": source,
                 "role_stated": role,
                 "metrics": metrics,
                 "claims_outcome": bool(item.get("claims_outcome", False)),
-                "verifiable_by_user": _optional_bool(
+                "verifiable_by_user": optional_bool(
                     item.get("verifiable_by_user"), f"claims[{index}].verifiable_by_user"
                 ),
                 "repeatable_stated": bool(item.get("repeatable_stated", False)),
@@ -151,19 +115,19 @@ def parse_claims(raw: object) -> list[dict[str, Any]]:
 
 
 def parse_timeline(raw: object) -> list[dict[str, Any]]:
-    entries = _require_list(raw if raw is not None else [], "timeline")
+    entries = require_list(raw if raw is not None else [], "timeline")
     timeline = []
     for index, entry in enumerate(entries):
-        item = _require_object(entry, f"timeline[{index}]")
-        start = _month_index(item.get("start"), f"timeline[{index}].start")
-        end = _month_index(item.get("end"), f"timeline[{index}].end")
+        item = require_object(entry, f"timeline[{index}]")
+        start = optional_month_index(item.get("start"), f"timeline[{index}].start")
+        end = optional_month_index(item.get("end"), f"timeline[{index}].end")
         if start is None:
             raise ValueError(f"timeline[{index}].start is required")
         if end is not None and end < start:
             raise ValueError(f"timeline[{index}].end must not precede start")
         timeline.append(
             {
-                "label": _require_text(item.get("label"), f"timeline[{index}].label"),
+                "label": require_text(item.get("label"), f"timeline[{index}].label"),
                 "start": start,
                 "end": end,
                 "start_text": item.get("start"),
@@ -174,17 +138,17 @@ def parse_timeline(raw: object) -> list[dict[str, Any]]:
 
 
 def parse_requirements(raw: object, claim_ids: set[str]) -> list[dict[str, Any]]:
-    entries = _require_list(raw if raw is not None else [], "requirements")
+    entries = require_list(raw if raw is not None else [], "requirements")
     requirements = []
     for index, entry in enumerate(entries):
-        item = _require_object(entry, f"requirements[{index}]")
+        item = require_object(entry, f"requirements[{index}]")
         kind = item.get("kind", "must")
         if kind not in REQUIREMENT_KINDS:
             raise ValueError(f"requirements[{index}].kind must be one of {list(REQUIREMENT_KINDS)}")
         covered_by = [
-            _require_text(value, f"requirements[{index}].covered_by[{position}]")
+            require_text(value, f"requirements[{index}].covered_by[{position}]")
             for position, value in enumerate(
-                _require_list(item.get("covered_by", []), f"requirements[{index}].covered_by")
+                require_list(item.get("covered_by", []), f"requirements[{index}].covered_by")
             )
         ]
         for claim_id in covered_by:
@@ -194,7 +158,7 @@ def parse_requirements(raw: object, claim_ids: set[str]) -> list[dict[str, Any]]
                 )
         requirements.append(
             {
-                "text": _require_text(item.get("text"), f"requirements[{index}].text"),
+                "text": require_text(item.get("text"), f"requirements[{index}].text"),
                 "kind": kind,
                 "covered_by": covered_by,
             }
@@ -203,12 +167,12 @@ def parse_requirements(raw: object, claim_ids: set[str]) -> list[dict[str, Any]]
 
 
 def parse_prepared(raw: object) -> dict[str, str]:
-    entries = _require_list(raw if raw is not None else [], "prepared")
+    entries = require_list(raw if raw is not None else [], "prepared")
     prepared: dict[str, str] = {}
     known = {topic for topic, _, _ in PREPARED_TOPICS}
     for index, entry in enumerate(entries):
-        item = _require_object(entry, f"prepared[{index}]")
-        topic = _require_text(item.get("topic"), f"prepared[{index}].topic")
+        item = require_object(entry, f"prepared[{index}]")
+        topic = require_text(item.get("topic"), f"prepared[{index}].topic")
         if topic not in known:
             raise ValueError(f"prepared[{index}].topic is not a known topic: {topic!r}")
         status = item.get("status", "none")
@@ -359,13 +323,7 @@ def collect_flags(
     preparation: list[dict[str, Any]],
     questions_to_ask: list[str],
 ) -> list[dict[str, Any]]:
-    flags: list[dict[str, Any]] = []
-
-    def add(code: str, message: str, items: list[str] | None = None) -> None:
-        flag: dict[str, Any] = {"code": code, "message": message}
-        if items:
-            flag["items"] = items
-        flags.append(flag)
+    flags, add = flag_collector()
 
     if not claims:
         add("claims_not_captured", "提出書類の主張が取り込まれていない。書類を見ずに想定質問を作らない")
@@ -402,8 +360,8 @@ def collect_flags(
 
 
 def analyze(payload: object) -> dict[str, Any]:
-    data = _require_object(payload, "input")
-    role = _require_text(data.get("role"), "role")
+    data = require_object(payload, "input")
+    role = require_text(data.get("role"), "role")
 
     track = data.get("track", "chuto")
     if track not in TRACKS:
@@ -418,9 +376,9 @@ def analyze(payload: object) -> dict[str, Any]:
     prepared = parse_prepared(data.get("prepared"))
     preparation = build_preparation(track, prepared)
     questions_to_ask = [
-        _require_text(question, f"questions_to_ask[{index}]")
+        require_text(question, f"questions_to_ask[{index}]")
         for index, question in enumerate(
-            _require_list(data.get("questions_to_ask", []), "questions_to_ask")
+            require_list(data.get("questions_to_ask", []), "questions_to_ask")
         )
     ]
 
@@ -457,26 +415,7 @@ def analyze(payload: object) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("input", nargs="?", help="入力JSONのパス。省略した場合は標準入力から読む")
-    args = parser.parse_args(argv)
-
-    raw = Path(args.input).read_text(encoding="utf-8") if args.input else sys.stdin.read()
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError as error:
-        print(f"input is not valid JSON: {error}", file=sys.stderr)
-        return 2
-
-    try:
-        report = analyze(payload)
-    except ValueError as error:
-        print(str(error), file=sys.stderr)
-        return 2
-
-    json.dump(report, sys.stdout, ensure_ascii=False, indent=2)
-    sys.stdout.write("\n")
-    return 0
+    return run_cli(analyze, __doc__, argv)
 
 
 if __name__ == "__main__":

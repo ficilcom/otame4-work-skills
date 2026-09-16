@@ -8,12 +8,18 @@
 
 from __future__ import annotations
 
-import argparse
-import json
-import sys
-from datetime import date
-from pathlib import Path
 from typing import Any
+
+from _common import (
+    flag_collector,
+    optional_bool,
+    optional_date,
+    optional_text,
+    require_list,
+    require_object,
+    require_text,
+    run_cli,
+)
 
 
 STAGES = ("casual", "first", "second", "final", "unknown")
@@ -23,74 +29,31 @@ REVERSE_RESULTS = ("answered", "partial", "deferred", "unanswered")
 FRESH_RECORD_DAYS = 3
 
 
-def _require_object(value: object, path: str) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        raise ValueError(f"{path} must be an object")
-    return value
-
-
-def _require_list(value: object, path: str) -> list[Any]:
-    if not isinstance(value, list):
-        raise ValueError(f"{path} must be a list")
-    return value
-
-
-def _require_text(value: object, path: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{path} must be a non-empty string")
-    return value.strip()
-
-
-def _optional_text(value: object, path: str) -> str | None:
-    if value is None:
-        return None
-    return _require_text(value, path)
-
-
-def _optional_bool(value: object, path: str) -> bool | None:
-    if value is None:
-        return None
-    if not isinstance(value, bool):
-        raise ValueError(f"{path} must be a boolean or null")
-    return value
-
-
-def _optional_date(value: object, path: str) -> date | None:
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        raise ValueError(f"{path} must be an ISO date string (YYYY-MM-DD) or null")
-    try:
-        return date.fromisoformat(value)
-    except ValueError as error:
-        raise ValueError(f"{path} is not an ISO date (YYYY-MM-DD): {error}") from error
-
-
 def parse_questions(raw: object) -> list[dict[str, Any]]:
-    entries = _require_list(raw if raw is not None else [], "questions")
+    entries = require_list(raw if raw is not None else [], "questions")
     questions = []
     for index, entry in enumerate(entries):
-        item = _require_object(entry, f"questions[{index}]")
+        item = require_object(entry, f"questions[{index}]")
         answered = item.get("answered", "none")
         if answered not in ANSWER_LEVELS:
             raise ValueError(f"questions[{index}].answered must be one of {list(ANSWER_LEVELS)}")
         questions.append(
             {
-                "text": _require_text(item.get("text"), f"questions[{index}].text"),
+                "text": require_text(item.get("text"), f"questions[{index}].text"),
                 "answered": answered,
-                "prepared": _optional_bool(item.get("prepared"), f"questions[{index}].prepared"),
+                "prepared": optional_bool(item.get("prepared"), f"questions[{index}].prepared"),
                 "from_documents": bool(item.get("from_documents", False)),
-                "note": _optional_text(item.get("note"), f"questions[{index}].note"),
+                "note": optional_text(item.get("note"), f"questions[{index}].note"),
             }
         )
     return questions
 
 
 def parse_reverse_questions(raw: object) -> list[dict[str, Any]]:
-    entries = _require_list(raw if raw is not None else [], "questions_asked")
+    entries = require_list(raw if raw is not None else [], "questions_asked")
     asked = []
     for index, entry in enumerate(entries):
-        item = _require_object(entry, f"questions_asked[{index}]")
+        item = require_object(entry, f"questions_asked[{index}]")
         result = item.get("result", "unanswered")
         if result not in REVERSE_RESULTS:
             raise ValueError(
@@ -98,28 +61,28 @@ def parse_reverse_questions(raw: object) -> list[dict[str, Any]]:
             )
         asked.append(
             {
-                "text": _require_text(item.get("text"), f"questions_asked[{index}].text"),
+                "text": require_text(item.get("text"), f"questions_asked[{index}].text"),
                 "result": result,
-                "note": _optional_text(item.get("note"), f"questions_asked[{index}].note"),
+                "note": optional_text(item.get("note"), f"questions_asked[{index}].note"),
             }
         )
     return asked
 
 
 def parse_statements(raw: object) -> list[dict[str, Any]]:
-    entries = _require_list(raw if raw is not None else [], "employer_statements")
+    entries = require_list(raw if raw is not None else [], "employer_statements")
     statements = []
     for index, entry in enumerate(entries):
-        item = _require_object(entry, f"employer_statements[{index}]")
+        item = require_object(entry, f"employer_statements[{index}]")
         statements.append(
             {
-                "topic": _require_text(item.get("topic"), f"employer_statements[{index}].topic"),
-                "statement": _require_text(
+                "topic": require_text(item.get("topic"), f"employer_statements[{index}].topic"),
+                "statement": require_text(
                     item.get("statement"), f"employer_statements[{index}].statement"
                 ),
-                "said_by": _optional_text(item.get("said_by"), f"employer_statements[{index}].said_by"),
+                "said_by": optional_text(item.get("said_by"), f"employer_statements[{index}].said_by"),
                 "in_writing": bool(item.get("in_writing", False)),
-                "conflicts_with_posting": _optional_bool(
+                "conflicts_with_posting": optional_bool(
                     item.get("conflicts_with_posting"),
                     f"employer_statements[{index}].conflicts_with_posting",
                 ),
@@ -130,16 +93,16 @@ def parse_statements(raw: object) -> list[dict[str, Any]]:
 
 
 def parse_next_steps(raw: object) -> dict[str, Any]:
-    steps = _require_object(raw if raw is not None else {}, "next_steps")
+    steps = require_object(raw if raw is not None else {}, "next_steps")
     next_stage = steps.get("next_stage", "unknown")
     if next_stage not in STAGES:
         raise ValueError(f"next_steps.next_stage must be one of {list(STAGES)}")
     return {
         "next_stage": next_stage,
-        "result_promised_by": _optional_date(
+        "result_promised_by": optional_date(
             steps.get("result_promised_by"), "next_steps.result_promised_by"
         ),
-        "who_contacts": _optional_text(steps.get("who_contacts"), "next_steps.who_contacts"),
+        "who_contacts": optional_text(steps.get("who_contacts"), "next_steps.who_contacts"),
     }
 
 
@@ -150,13 +113,7 @@ def collect_flags(
     next_steps: dict[str, Any],
     days_since: int | None,
 ) -> list[dict[str, Any]]:
-    flags: list[dict[str, Any]] = []
-
-    def add(code: str, message: str, items: list[str] | None = None) -> None:
-        flag: dict[str, Any] = {"code": code, "message": message}
-        if items:
-            flag["items"] = items
-        flags.append(flag)
+    flags, add = flag_collector()
 
     if not questions:
         add("questions_not_captured", "聞かれた質問が記録されていない。振り返りの材料がない")
@@ -235,15 +192,15 @@ def collect_flags(
 
 
 def review(payload: object) -> dict[str, Any]:
-    data = _require_object(payload, "input")
-    company = _require_text(data.get("company"), "company")
+    data = require_object(payload, "input")
+    company = require_text(data.get("company"), "company")
 
     stage = data.get("stage", "unknown")
     if stage not in STAGES:
         raise ValueError(f"stage must be one of {list(STAGES)}")
 
-    interview_date = _optional_date(data.get("date"), "date")
-    as_of = _optional_date(data.get("as_of"), "as_of")
+    interview_date = optional_date(data.get("date"), "date")
+    as_of = optional_date(data.get("as_of"), "as_of")
     if interview_date and as_of and as_of < interview_date:
         raise ValueError("as_of must not precede date")
     days_since = (as_of - interview_date).days if interview_date and as_of else None
@@ -312,26 +269,7 @@ def review(payload: object) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("input", nargs="?", help="入力JSONのパス。省略した場合は標準入力から読む")
-    args = parser.parse_args(argv)
-
-    raw = Path(args.input).read_text(encoding="utf-8") if args.input else sys.stdin.read()
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError as error:
-        print(f"input is not valid JSON: {error}", file=sys.stderr)
-        return 2
-
-    try:
-        report = review(payload)
-    except ValueError as error:
-        print(str(error), file=sys.stderr)
-        return 2
-
-    json.dump(report, sys.stdout, ensure_ascii=False, indent=2)
-    sys.stdout.write("\n")
-    return 0
+    return run_cli(review, __doc__, argv)
 
 
 if __name__ == "__main__":

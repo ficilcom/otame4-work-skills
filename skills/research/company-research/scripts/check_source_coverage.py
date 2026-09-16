@@ -7,13 +7,18 @@
 
 from __future__ import annotations
 
-import argparse
-import json
 import re
-import sys
 from datetime import date
-from pathlib import Path
 from typing import Any
+
+from _common import (
+    optional_date,
+    require_date,
+    require_list,
+    require_object,
+    require_text,
+    run_cli,
+)
 
 
 # 出典の強さ。日本の求人・企業調査で実際に当たれる情報源に対応させている。
@@ -52,55 +57,25 @@ DEFAULT_TOPICS = (
 URL_PATTERN = re.compile(r"^https?://\S+$")
 
 
-def _require_object(value: object, path: str) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        raise ValueError(f"{path} must be an object")
-    return value
-
-
-def _require_list(value: object, path: str) -> list[Any]:
-    if not isinstance(value, list):
-        raise ValueError(f"{path} must be a list")
-    return value
-
-
-def _require_text(value: object, path: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{path} must be a non-empty string")
-    return value.strip()
-
-
-def _require_date(value: object, path: str) -> date:
-    text = _require_text(value, path)
-    try:
-        return date.fromisoformat(text)
-    except ValueError as error:
-        raise ValueError(f"{path} must be an ISO date (YYYY-MM-DD): {error}") from None
-
-
-def _optional_date(value: object, path: str) -> date | None:
-    return None if value is None else _require_date(value, path)
-
-
 def parse_source(raw: object, path: str, as_of: date) -> dict[str, Any]:
-    source = _require_object(raw, path)
-    tier = _require_text(source.get("tier"), f"{path}.tier")
+    source = require_object(raw, path)
+    tier = require_text(source.get("tier"), f"{path}.tier")
     if tier not in TIER_RANKS:
         raise ValueError(f"{path}.tier must be one of {sorted(TIER_RANKS)}")
 
     url = source.get("url")
     if url is not None:
-        url = _require_text(url, f"{path}.url")
+        url = require_text(url, f"{path}.url")
         if not URL_PATTERN.match(url):
             raise ValueError(f"{path}.url must be an http(s) URL")
     elif tier != "user_provided":
         raise ValueError(f"{path}.url is required unless the tier is user_provided")
 
-    retrieved_on = _require_date(source.get("retrieved_on"), f"{path}.retrieved_on")
+    retrieved_on = require_date(source.get("retrieved_on"), f"{path}.retrieved_on")
     if retrieved_on > as_of:
         raise ValueError(f"{path}.retrieved_on must not be later than as_of")
 
-    published_on = _optional_date(source.get("published_on"), f"{path}.published_on")
+    published_on = optional_date(source.get("published_on"), f"{path}.published_on")
     if published_on is not None and published_on > as_of:
         raise ValueError(f"{path}.published_on must not be later than as_of")
 
@@ -124,23 +99,23 @@ def parse_source(raw: object, path: str, as_of: date) -> dict[str, Any]:
 
 
 def parse_claim(raw: object, index: int, as_of: date, topics: tuple[str, ...]) -> dict[str, Any]:
-    claim = _require_object(raw, f"claims[{index}]")
-    identifier = _require_text(claim.get("id"), f"claims[{index}].id")
-    statement = _require_text(claim.get("statement"), f"claims[{index}].statement")
+    claim = require_object(raw, f"claims[{index}]")
+    identifier = require_text(claim.get("id"), f"claims[{index}].id")
+    statement = require_text(claim.get("statement"), f"claims[{index}].statement")
 
-    topic = _require_text(claim.get("topic"), f"claims[{index}].topic")
+    topic = require_text(claim.get("topic"), f"claims[{index}].topic")
     if topic not in topics:
         raise ValueError(f"claims[{index}].topic must be one of {sorted(topics)}")
 
     sources = [
         parse_source(source, f"claims[{index}].sources[{position}]", as_of)
-        for position, source in enumerate(_require_list(claim.get("sources", []), f"claims[{index}].sources"))
+        for position, source in enumerate(require_list(claim.get("sources", []), f"claims[{index}].sources"))
     ]
 
     conflicts = [
-        _require_text(other, f"claims[{index}].conflicts_with[{position}]")
+        require_text(other, f"claims[{index}].conflicts_with[{position}]")
         for position, other in enumerate(
-            _require_list(claim.get("conflicts_with", []), f"claims[{index}].conflicts_with")
+            require_list(claim.get("conflicts_with", []), f"claims[{index}].conflicts_with")
         )
     ]
 
@@ -170,22 +145,22 @@ def parse_claim(raw: object, index: int, as_of: date, topics: tuple[str, ...]) -
 
 
 def analyze(payload: object) -> dict[str, Any]:
-    data = _require_object(payload, "input")
-    company = _require_text(data.get("company"), "company")
-    as_of = _require_date(data.get("as_of"), "as_of")
+    data = require_object(payload, "input")
+    company = require_text(data.get("company"), "company")
+    as_of = require_date(data.get("as_of"), "as_of")
 
     raw_topics = data.get("topics")
     if raw_topics is None:
         topics = DEFAULT_TOPICS
     else:
-        listed = _require_list(raw_topics, "topics")
+        listed = require_list(raw_topics, "topics")
         if not listed:
             raise ValueError("topics must not be empty")
         topics = tuple(
-            _require_text(topic, f"topics[{index}]") for index, topic in enumerate(listed)
+            require_text(topic, f"topics[{index}]") for index, topic in enumerate(listed)
         )
 
-    raw_claims = _require_list(data.get("claims"), "claims")
+    raw_claims = require_list(data.get("claims"), "claims")
     if not raw_claims:
         raise ValueError("claims must contain at least one entry")
 
@@ -269,26 +244,7 @@ def analyze(payload: object) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("input", nargs="?", help="入力JSONのパス。省略した場合は標準入力から読む")
-    args = parser.parse_args(argv)
-
-    raw = Path(args.input).read_text(encoding="utf-8") if args.input else sys.stdin.read()
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError as error:
-        print(f"input is not valid JSON: {error}", file=sys.stderr)
-        return 2
-
-    try:
-        report = analyze(payload)
-    except ValueError as error:
-        print(str(error), file=sys.stderr)
-        return 2
-
-    json.dump(report, sys.stdout, ensure_ascii=False, indent=2)
-    sys.stdout.write("\n")
-    return 0
+    return run_cli(analyze, __doc__, argv)
 
 
 if __name__ == "__main__":

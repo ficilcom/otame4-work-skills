@@ -1,16 +1,17 @@
 """Regression coverage for descriptions skipped by the skills CLI's YAML parser."""
 
-import importlib.util
 import tempfile
+import sys
 import unittest
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-ROOT = Path(__file__).resolve().parents[2]
-SPEC = importlib.util.spec_from_file_location("validate_skills", ROOT / "scripts/validate_skills.py")
-MODULE = importlib.util.module_from_spec(SPEC)
-assert SPEC.loader is not None
-SPEC.loader.exec_module(MODULE)
+from _loader import load_script  # noqa: E402
+
+
+MODULE = load_script("scripts/validate_skills.py")
+ROOT = MODULE.ROOT
 
 
 class DescriptionYamlTest(unittest.TestCase):

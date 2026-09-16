@@ -8,12 +8,17 @@
 
 from __future__ import annotations
 
-import argparse
-import json
-import sys
-from datetime import date
-from pathlib import Path
 from typing import Any
+
+from _common import (
+    flag_collector,
+    optional_date,
+    optional_text,
+    require_list,
+    require_object,
+    require_text,
+    run_cli,
+)
 
 
 # 不満の原因がどこにあるか。転職で変わる範囲が原因ごとに違う。
@@ -43,49 +48,14 @@ STAY_OPTIONS = {code for code, _, keeps in OPTIONS if keeps}
 INTERNALLY_ADDRESSABLE = ("role", "team", "self")
 
 
-def _require_object(value: object, path: str) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        raise ValueError(f"{path} must be an object")
-    return value
-
-
-def _require_list(value: object, path: str) -> list[Any]:
-    if not isinstance(value, list):
-        raise ValueError(f"{path} must be a list")
-    return value
-
-
-def _require_text(value: object, path: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{path} must be a non-empty string")
-    return value.strip()
-
-
-def _optional_text(value: object, path: str) -> str | None:
-    if value is None:
-        return None
-    return _require_text(value, path)
-
-
-def _optional_date(value: object, path: str) -> date | None:
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        raise ValueError(f"{path} must be an ISO date string (YYYY-MM-DD) or null")
-    try:
-        return date.fromisoformat(value)
-    except ValueError as error:
-        raise ValueError(f"{path} is not an ISO date (YYYY-MM-DD): {error}") from error
-
-
 def parse_concerns(raw: object) -> list[dict[str, Any]]:
-    entries = _require_list(raw if raw is not None else [], "concerns")
+    entries = require_list(raw if raw is not None else [], "concerns")
     concerns = []
     seen: set[str] = set()
     for index, entry in enumerate(entries):
         path = f"concerns[{index}]"
-        item = _require_object(entry, path)
-        concern_id = _require_text(item.get("id"), f"{path}.id")
+        item = require_object(entry, path)
+        concern_id = require_text(item.get("id"), f"{path}.id")
         if concern_id in seen:
             raise ValueError(f"{path}.id is duplicated: {concern_id!r}")
         seen.add(concern_id)
@@ -106,7 +76,7 @@ def parse_concerns(raw: object) -> list[dict[str, Any]]:
         concerns.append(
             {
                 "id": concern_id,
-                "text": _require_text(item.get("text"), f"{path}.text"),
+                "text": require_text(item.get("text"), f"{path}.text"),
                 "cause": cause,
                 "portable": portable,
                 "tried_internally": tried,
@@ -117,27 +87,27 @@ def parse_concerns(raw: object) -> list[dict[str, Any]]:
 
 
 def parse_wants(raw: object) -> list[dict[str, Any]]:
-    entries = _require_list(raw if raw is not None else [], "wants")
+    entries = require_list(raw if raw is not None else [], "wants")
     return [
         {
-            "text": _require_text(_require_object(entry, f"wants[{index}]").get("text"), f"wants[{index}].text"),
-            "must": bool(_require_object(entry, f"wants[{index}]").get("must", False)),
+            "text": require_text(require_object(entry, f"wants[{index}]").get("text"), f"wants[{index}].text"),
+            "must": bool(require_object(entry, f"wants[{index}]").get("must", False)),
         }
         for index, entry in enumerate(entries)
     ]
 
 
 def parse_keeps(raw: object) -> list[dict[str, Any]]:
-    entries = _require_list(raw if raw is not None else [], "keeps")
+    entries = require_list(raw if raw is not None else [], "keeps")
     keeps = []
     for index, entry in enumerate(entries):
-        item = _require_object(entry, f"keeps[{index}]")
+        item = require_object(entry, f"keeps[{index}]")
         importance = item.get("importance", "unknown")
         if importance not in IMPORTANCE:
             raise ValueError(f"keeps[{index}].importance must be one of {list(IMPORTANCE)}")
         keeps.append(
             {
-                "text": _require_text(item.get("text"), f"keeps[{index}].text"),
+                "text": require_text(item.get("text"), f"keeps[{index}].text"),
                 "importance": importance,
             }
         )
@@ -145,10 +115,10 @@ def parse_keeps(raw: object) -> list[dict[str, Any]]:
 
 
 def parse_options(raw: object) -> dict[str, dict[str, Any]]:
-    entries = _require_list(raw if raw is not None else [], "options")
+    entries = require_list(raw if raw is not None else [], "options")
     parsed: dict[str, dict[str, Any]] = {}
     for index, entry in enumerate(entries):
-        item = _require_object(entry, f"options[{index}]")
+        item = require_object(entry, f"options[{index}]")
         code = item.get("code")
         if code not in OPTION_CODES:
             raise ValueError(f"options[{index}].code is not a known option: {code!r}")
@@ -159,21 +129,21 @@ def parse_options(raw: object) -> dict[str, dict[str, Any]]:
             raise ValueError(f"options[{index}].status must be one of {list(OPTION_STATUSES)}")
         parsed[code] = {
             "status": status,
-            "note": _optional_text(item.get("note"), f"options[{index}].note"),
+            "note": optional_text(item.get("note"), f"options[{index}].note"),
         }
     return parsed
 
 
 def parse_constraints(raw: object) -> list[dict[str, Any]]:
-    entries = _require_list(raw if raw is not None else [], "constraints")
+    entries = require_list(raw if raw is not None else [], "constraints")
     return [
         {
-            "text": _require_text(
-                _require_object(entry, f"constraints[{index}]").get("text"),
+            "text": require_text(
+                require_object(entry, f"constraints[{index}]").get("text"),
                 f"constraints[{index}].text",
             ),
-            "date": _optional_date(
-                _require_object(entry, f"constraints[{index}]").get("date"),
+            "date": optional_date(
+                require_object(entry, f"constraints[{index}]").get("date"),
                 f"constraints[{index}].date",
             ),
         }
@@ -205,13 +175,7 @@ def collect_flags(
     days_to_deadline: int | None,
     criteria_defined: bool | None,
 ) -> list[dict[str, Any]]:
-    flags: list[dict[str, Any]] = []
-
-    def add(code: str, message: str, items: list[str] | None = None) -> None:
-        flag: dict[str, Any] = {"code": code, "message": message}
-        if items:
-            flag["items"] = items
-        flags.append(flag)
+    flags, add = flag_collector()
 
     if not concerns:
         add("concerns_not_captured", "現状の不満は未入力。不満のない相談では、希望や今後確かめたいことから対話を続けられる")
@@ -288,8 +252,8 @@ def collect_flags(
 
 
 def sort_inputs(payload: object) -> dict[str, Any]:
-    data = _require_object(payload, "input")
-    as_of = _optional_date(data.get("as_of"), "as_of")
+    data = require_object(payload, "input")
+    as_of = optional_date(data.get("as_of"), "as_of")
 
     concerns = parse_concerns(data.get("concerns"))
     wants = parse_wants(data.get("wants"))
@@ -297,8 +261,8 @@ def sort_inputs(payload: object) -> dict[str, Any]:
     provided = parse_options(data.get("options"))
     constraints = parse_constraints(data.get("constraints"))
 
-    decision = _require_object(data.get("decision", {}), "decision")
-    deadline = _optional_date(decision.get("deadline"), "decision.deadline")
+    decision = require_object(data.get("decision", {}), "decision")
+    deadline = optional_date(decision.get("deadline"), "decision.deadline")
     criteria_defined = decision.get("criteria_defined")
     if criteria_defined is not None and not isinstance(criteria_defined, bool):
         raise ValueError("decision.criteria_defined must be a boolean or null")
@@ -356,26 +320,7 @@ def sort_inputs(payload: object) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("input", nargs="?", help="入力JSONのパス。省略した場合は標準入力から読む")
-    args = parser.parse_args(argv)
-
-    raw = Path(args.input).read_text(encoding="utf-8") if args.input else sys.stdin.read()
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError as error:
-        print(f"input is not valid JSON: {error}", file=sys.stderr)
-        return 2
-
-    try:
-        report = sort_inputs(payload)
-    except ValueError as error:
-        print(str(error), file=sys.stderr)
-        return 2
-
-    json.dump(report, sys.stdout, ensure_ascii=False, indent=2)
-    sys.stdout.write("\n")
-    return 0
+    return run_cli(sort_inputs, __doc__, argv)
 
 
 if __name__ == "__main__":
