@@ -123,11 +123,43 @@ class SignalTest(unittest.TestCase):
             0,
             "with_whitespace",
         )
-        self.assertEqual(len(result["contact_details_in_body"]), 2)
+        found = {item["kind"]: item["count"] for item in result["personal_data_in_body"]}
+        self.assertEqual(found, {"email": 1, "phone": 1})
         self.assertIn(
-            "本文に連絡先が含まれている。設問が求めていなければ削除する",
+            "本文に個人情報が含まれている（メールアドレス、電話番号）。設問が求めていなければ削除する",
             result["review_points"],
         )
+
+    def test_my_number_in_body_is_flagged(self):
+        """12桁の数字はリポジトリ側ガードだけでなく利用者への報告でも検出する。"""
+        digits = "1234 5678 9012"
+        result = MODULE.analyze_document(
+            document(f"番号は{digits}です。" + "あ" * 60), 0, "with_whitespace"
+        )
+        found = {item["kind"] for item in result["personal_data_in_body"]}
+        self.assertIn("my_number", found)
+        self.assertTrue(
+            any("マイナンバー" in point for point in result["review_points"]),
+            result["review_points"],
+        )
+
+    def test_personal_data_is_never_echoed_into_the_report(self):
+        """検出した値そのものは報告に載せない（個人情報を出力しない方針）。"""
+        secrets = ("taro@example.com", "03-1234-5678", "1234 5678 9012")
+        answer = "連絡先は {} と {}、番号は {} です。".format(*secrets) + "あ" * 60
+        result = MODULE.analyze_document(document(answer), 0, "with_whitespace")
+        self.assertEqual(len(result["personal_data_in_body"]), 3)
+        serialized = json.dumps(result, ensure_ascii=False)
+        for secret in secrets:
+            self.assertNotIn(secret, serialized)
+
+    def test_answer_whitespace_is_preserved_for_counting(self):
+        """_require_text は strip しない。前後の空白も提出時の文字数に含まれる。"""
+        result = MODULE.analyze_document(
+            document("  あいうえお  ", limit_chars=None), 0, "with_whitespace"
+        )
+        self.assertEqual(result["counts"]["with_whitespace"], 9)
+        self.assertEqual(result["counts"]["without_whitespace"], 5)
 
     def test_paragraphs_are_split_on_blank_lines(self):
         result = MODULE.analyze_document(

@@ -41,8 +41,18 @@ REDUNDANT_PHRASES = (
     "しっかりと",
 )
 
+# 本文に混ざった個人情報を見つけるための検査。scripts/validate_skills.py の
+# リポジトリ側ガードと同じ規則を使う。片方だけ増えると検出漏れになるため、
+# 追加するときは両方を揃える。
 EMAIL_PATTERN = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-PHONE_PATTERN = re.compile(r"\b0\d{1,4}-\d{1,4}-\d{3,4}\b")
+PHONE_PATTERN = re.compile(r"(?<!\d)0\d{1,4}-\d{1,4}-\d{3,4}(?!\d)")
+MYNUMBER_PATTERN = re.compile(r"(?<!\d)\d{4}[- ]?\d{4}[- ]?\d{4}(?!\d)")
+
+PERSONAL_DATA_PATTERNS: tuple[tuple[str, str, re.Pattern[str]], ...] = (
+    ("email", "メールアドレス", EMAIL_PATTERN),
+    ("phone", "電話番号", PHONE_PATTERN),
+    ("my_number", "マイナンバーらしき12桁の数字", MYNUMBER_PATTERN),
+)
 
 
 def _require_object(value: object, path: str) -> dict[str, Any]:
@@ -58,6 +68,12 @@ def _require_list(value: object, path: str) -> list[Any]:
 
 
 def _require_text(value: object, path: str) -> str:
+    """空でないことだけを確かめ、値は原文のまま返す。
+
+    他のスキルの同名ヘルパーと違い、ここでは strip しない。前後の空白も
+    提出時の文字数に含まれるため、削ると count_characters の結果が変わり、
+    上限の判定が実際の提出内容とずれる。共通化するときも strip しない。
+    """
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{path} must be a non-empty string")
     return value
@@ -105,10 +121,18 @@ def find_redundant_phrases(answer: str) -> list[dict[str, Any]]:
     return found
 
 
-def find_contact_details(answer: str) -> list[str]:
-    hits = [match.group(0) for match in EMAIL_PATTERN.finditer(answer)]
-    hits.extend(match.group(0) for match in PHONE_PATTERN.finditer(answer))
-    return hits
+def find_personal_data(answer: str) -> list[dict[str, Any]]:
+    """本文に混ざった個人情報を種類と件数で返す。
+
+    一致した文字列そのものは返さない。削除を促すのに必要なのは「何が何件あるか」
+    であって値ではなく、報告に載せると個人情報を出力しない方針に反する。
+    """
+    found: list[dict[str, Any]] = []
+    for kind, label, pattern in PERSONAL_DATA_PATTERNS:
+        count = len(pattern.findall(answer))
+        if count:
+            found.append({"kind": kind, "label": label, "count": count})
+    return found
 
 
 def analyze_document(raw: object, index: int, count_rule: str) -> dict[str, Any]:
@@ -153,7 +177,7 @@ def analyze_document(raw: object, index: int, count_rule: str) -> dict[str, Any]
     ]
 
     numeric_tokens = NUMERIC_PATTERN.findall(answer)
-    contact_details = find_contact_details(answer)
+    personal_data = find_personal_data(answer)
 
     review_points: list[str] = []
     if length_status == "over_limit":
@@ -168,8 +192,16 @@ def analyze_document(raw: object, index: int, count_rule: str) -> dict[str, Any]
         review_points.append(f"{LONG_SENTENCE_CHARS}字超の文が{len(long_sentences)}件ある")
     if not numeric_tokens:
         review_points.append("数値による裏づけがない。規模・期間・成果を数で示せるか確認する")
-    if contact_details:
-        review_points.append("本文に連絡先が含まれている。設問が求めていなければ削除する")
+    if personal_data:
+        labels = "、".join(item["label"] for item in personal_data)
+        review_points.append(
+            f"本文に個人情報が含まれている（{labels}）。設問が求めていなければ削除する"
+        )
+    if any(item["kind"] == "my_number" for item in personal_data):
+        review_points.append(
+            "マイナンバーらしき数字がある。応募書類に書く場面はほぼない。"
+            "提出前に必ず削除し、誤って送っていないかも確認する"
+        )
 
     return {
         "id": identifier,
@@ -188,7 +220,7 @@ def analyze_document(raw: object, index: int, count_rule: str) -> dict[str, Any]
         "paragraph_count": count_paragraphs(answer),
         "numeric_token_count": len(numeric_tokens),
         "redundant_phrase_candidates": find_redundant_phrases(answer),
-        "contact_details_in_body": contact_details,
+        "personal_data_in_body": personal_data,
         "review_points": review_points,
     }
 

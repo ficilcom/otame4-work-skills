@@ -23,9 +23,12 @@ PLACEHOLDER_PATTERN = re.compile(r"\b(?:TODO|TBD|FIXME|PLACEHOLDER)\b", re.IGNOR
 ALLOWED_LICENSES = {"MIT"}
 
 # 実在する個人の応募書類をサンプルとして公開してしまう事故を止めるための最低限の検査。
+# 数字の並びは \b ではなく前後の数字だけを見て区切る。このリポジトリの本文は日本語で、
+# 「電話は03-1234-5678です」のように地の文へ直接続くと、\b は日本語の文字も
+# 語構成文字として扱うため境界にならず、検出漏れになる。
 EMAIL_PATTERN = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-PHONE_PATTERN = re.compile(r"\b0\d{1,4}-\d{1,4}-\d{3,4}\b")
-MYNUMBER_PATTERN = re.compile(r"\b\d{4}[- ]?\d{4}[- ]?\d{4}\b")
+PHONE_PATTERN = re.compile(r"(?<!\d)0\d{1,4}-\d{1,4}-\d{3,4}(?!\d)")
+MYNUMBER_PATTERN = re.compile(r"(?<!\d)\d{4}[- ]?\d{4}[- ]?\d{4}(?!\d)")
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS_DIR = ROOT / "skills"
