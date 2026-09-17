@@ -1,6 +1,6 @@
 ---
 name: otameshi-candidate
-description: Help job seekers use Otameshi Tenshoku to prepare profiles and applications, clarify trial conditions, plan learning visits or paid trial work, and reflect on the experience. Use when a candidate wants to apply for, prepare for, negotiate the scope of, or review an otameshi work experience; employer recruiting and hosting requests belong to otameshi-employer.
+description: Help job seekers use Otameshi Tenshoku to prepare profiles and applications, clarify trial conditions, plan learning visits or paid trial work, and reflect on the experience. Use when a candidate wants to apply for, prepare for, negotiate the scope of, or review an otameshi work experience; do not use to predict whether they will be hired or to judge their aptitude, to state fees, contract terms, or service conditions from memory, or to submit an application, update a profile, or send a message on their behalf. Employer recruiting and hosting requests belong to otameshi-employer.
 license: MIT
 metadata:
   author: ficilcom
@@ -8,7 +8,7 @@ metadata:
 
 # おためし転職：求職者の準備と振り返り
 
-体験で何を確かめ、どの範囲の仕事をいつまでに行い、その結果から何を判断するかを具体化する。求人本文、本人の経験・希望、チャットの抜粋、体験メモから、今必要な原稿や計画を作る。
+体験で何を確かめ、どの範囲の仕事をいつまでに行い、その結果から何を判断するかを具体化する。求人本文、本人の経験・希望、チャットの抜粋、体験メモから、今必要な原稿や計画を作る。適性や採用見込みの判定、報酬・契約・サービス条件の記憶による断定、応募や送信の代行は行わない。
 
 ## 進め方
 
@@ -23,8 +23,9 @@ metadata:
 | 体験後に判断したい・返信したい | [振り返り](references/debrief.md)：期待と観察事実、未確認事項、次の行動、返信案 |
 | サービスの料金・契約・支払い・キャンセル・無償掲載可否が判断に関わる | [公式情報の確認](references/source-checks.md)：出典と時点、説明の差、確認する相手と質問 |
 
-4. プロフィール文・応募文は、本人が示した経験、今回の業務との接点、希望する体験、提供可能な時間から依頼に合う長さで作る。企業の募集要件と本人の経験を混ぜず、不明な資格・実績・稼働条件を補わない。未確認の条件は質問にし、本人が選んでいない希望条件は原稿外の提案にする。
-5. 私的な整理と相手に送る下書きを分けて返す。条件調整では「企業の提示」「本人の希望」「提案」「双方の合意」「未確認」を区別し、合意の根拠になる本文や発言を添える。承認・同意を表す返信は本人が決めた場合だけ下書きする。
+4. 有償業務の条件が揃ってきたら、`python3 scripts/check_trial_terms.py <input.json>` で、実働の合計、期間に配置したときの週あたりの実働、予定額と換算時給、未確認の条件を機械的に出す。入力形式は [有償業務](references/paid-work.md#スクリプト入力) を見る。**求職者の実働と企業担当者の工数は別に数え、無償の作業を予定額に含めない。** 単価が提示されていなければ相場で埋めず、確認質問にする。
+5. プロフィール文・応募文は、本人が示した経験、今回の業務との接点、希望する体験、提供可能な時間から依頼に合う長さで作る。企業の募集要件と本人の経験を混ぜず、不明な資格・実績・稼働条件を補わない。未確認の条件は質問にし、本人が選んでいない希望条件は原稿外の提案にする。
+6. 私的な整理と相手に送る下書きを分けて返す。条件調整では「企業の提示」「本人の希望」「提案」「双方の合意」「未確認」を区別し、合意の根拠になる本文や発言を添える。承認・同意を表す返信は本人が決めた場合だけ下書きする。
 
 ## 判断上の制約
 

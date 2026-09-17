@@ -30,3 +30,56 @@
 成果への期待、仕事の完了確認、報酬条件、採用の判断は別々に扱う。雇用なら成果への不満や不採用を理由に賃金をゼロにする案は作らない。業務委託と記載されていても名称だけで法的扱いを決めず、支払い・検収・修正条件の不明点を質問にする。法令や最低賃金が判断に関わる場合は [一次情報](source-checks.md) を確認し、個別の法的判断は専門家への確認事項にする。
 
 返すのは、本人が検討できる条件表と、企業への確認・調整の返信案。相手が未回答の条件を「承諾します」に含めない。
+
+## スクリプト入力
+
+`scripts/check_trial_terms.py` は提示された条件を同じ基準に並べるだけで、応募の可否も条件の妥当性も判定しない。
+
+```json
+{
+  "as_of": "2026-09-17",
+  "trial": {
+    "label": "架空の記事改善おためし業務",
+    "engagement_type": "contract",
+    "weekly_available_hours": 6,
+    "period": {"start": "2026-10-01", "end": "2026-10-14", "checkpoint": "第1週末に途中確認"}
+  },
+  "tasks": [
+    {"label": "説明を受ける", "kind": "learning", "paid": true, "candidate_hours": 1, "company_hours": 1},
+    {"label": "改善案の作成", "kind": "company_work", "paid": true, "candidate_hours": 6, "candidate_hours_max": 8},
+    {"label": "合同レビュー", "kind": "company_work", "paid": true, "candidate_hours": 2, "company_hours": 2}
+  ],
+  "compensation": {
+    "basis": "hourly",
+    "hourly_rate": 2000,
+    "expenses_included": false,
+    "tax_treatment": "源泉徴収の有無を確認する",
+    "payment_date": "2026-11-30",
+    "payer": "架空商事"
+  },
+  "minimum_wage": {"hourly": 1200, "source": "確認した一次情報", "as_of": "2026-10-01"},
+  "revisions": {"rounds": 1, "hours": 2},
+  "conditions": [{"topic": "成果物の利用範囲", "value": null, "agreement": "unconfirmed"}]
+}
+```
+
+- `kind` は `learning`（見学・学習）/ `mock`（模擬課題）/ `company_work`（企業の実務）/ `unknown`。**企業の実務を `learning` にしない。** `company_work` が `"paid": false` だと注意が出る。
+- `paid` は支払い対象かどうか。分からないなら省略する。省略は「不明」であって無償ではない。**予定額は `"paid": true` の作業だけで計算する。**
+- `candidate_hours` は求職者の実働、`company_hours` は企業担当者の工数。**合同作業は双方に入れる。** 企業単独のレビューは `company_hours` だけに入れる。この2つは合計されない。
+- 見積もりに幅があるときだけ `candidate_hours_max` を足す。単一の見積もりなら省略する。
+- `basis` は `hourly` / `fixed` / `unknown`。単価が提示されていなければ `hourly_rate` を省略する。**相場で埋めない。**
+- `minimum_wage` は、利用者が一次情報で地域と時点を確認した値だけを入れる。省略すると「未入力」として注意が出る。スクリプトは最低賃金を持っていない。**比較には、無償の作業も含めた全実働で割った時給を使う。**
+- `revisions` は修正の回数と時間の範囲。「納得するまで」のように上限がないものは省略し、確認事項として扱う。**修正なしで合意しているなら `{"rounds": 0, "hours": 0}` と書く。** 省略（未確認）と0（合意済み）は別物である。
+- `agreement` は `company_offer` / `candidate_request` / `proposal` / `mutual` / `unconfirmed`。**`mutual` 以外を合意済みとして返信に含めない。**
+
+実行:
+
+```bash
+python3 scripts/check_trial_terms.py input.json
+```
+
+出力の `workload` は実働の内訳（有償・無償・未確定を分けた時間）、`schedule` は期間に配置したときの週あたりの実働、`compensation` は予定額と換算時給、`flags` は返信の前に確認すべき点。
+
+換算時給は2通り出る。`effective_hourly_paid_*` は予定額を**有償時間**で割ったもの、`effective_hourly_all_*` は**無償の作業も含めた全実働**で割ったものである。無償の必須作業があるほど後者は下がり、最低賃金との比較にも後者を使う。`fixed` の換算はいずれも比較のための割り算であり、時間単価の契約や適法性を意味しない。
+
+見積もりの欠けた作業があるうちは、週あたりの実働が収まるかを判定しない（`fits_weekly_availability` が `null` になる）。未確定を「収まる」に置き換えない。

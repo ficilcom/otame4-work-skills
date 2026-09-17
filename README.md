@@ -94,8 +94,8 @@ claude plugin install otame4-trial@otame4-work-skills
 | Offer | [`offer-comparison`](skills/offer/offer-comparison/) | 複数の内定を同じ基準に揃える。提示年収から固定残業代と保証のない賞与を分離し、変動しない年額とみなし残業込みの時給で並べる。順位も総合点も出さない。 |
 | Offer | [`offer-decline`](skills/offer/offer-decline/) | 受ける先が書面で確定しているかを確認したうえで、辞退の段階（選考途中・内定後・承諾後）と経路（エージェント・学校推薦・紹介）ごとに誰へ伝えるかを整理する。辞退の可否は判断しない。 |
 | Offer | [`resignation-plan`](skills/offer/resignation-plan/) | 退職の申出日・退職日・入社日を就業規則の定めと突き合わせ、有給の消化、引き継ぎ、書類の受け渡し、空白期間に発生する手続きを整理する。退職の可否は判断しない。 |
-| Trial | [`otameshi-candidate`](skills/trial/otameshi-candidate/) | 求職者向け。応募文、体験前の確認質問、学習体験・有償業務の計画、体験後の判断材料を作る。未経験でも企業の実務は有償枠を提案する。 |
-| Trial | [`otameshi-employer`](skills/trial/otameshi-employer/) | 企業向け。募集文・応募者への返信、学習体験の受け入れ、有償業務の範囲・品質・仕事量・期間・報酬・変更条件、フィードバック案を作る。 |
+| Trial | [`otameshi-candidate`](skills/trial/otameshi-candidate/) | 求職者向け。応募文、体験前の確認質問、学習体験・有償業務の計画、体験後の判断材料を作る。有償業務では実働・期間・予定額・換算時給を揃え、未経験でも企業の実務は有償枠を提案する。 |
+| Trial | [`otameshi-employer`](skills/trial/otameshi-employer/) | 企業向け。募集文・応募者への返信、学習体験の受け入れ、有償業務の範囲・品質・仕事量・期間・報酬・変更条件、フィードバック案を作る。候補者の実働と企業の工数を分けて数え、予定費用を予算と突き合わせる。 |
 
 ## おためし転職の使い方
 

@@ -15,6 +15,7 @@ from _repo import (
     ROOT,
     SKILLS_DIR,
     SKILLS_SH_FILE,
+    VENDORED_COMMON_NAME,
 )
 
 
@@ -28,6 +29,22 @@ ALLOWED_LICENSES = {"MIT"}
 # 受け渡しと、注意すべき点が違う）。ここで確かめるのは、節があることと、
 # 権限境界の約束が書かれていることだけで、文面は揃えない。
 BOUNDARY_HEADING = "## 個人情報と権限境界"
+
+# スキルの粒度を、既存スキルの模倣ではなく検証で保つ。並びと役割は AGENTS.md の
+# 「執筆」に書いてある。中身の深さは機械で測れないので、ここで見るのは置き場所だけ。
+REQUIRED_SECTIONS = ("## 進め方", "## 判断上の制約", BOUNDARY_HEADING)
+
+# 冒頭の段落は、何をするかに続けて、このスキルが行わないことで締める。
+# 「合否の予測、経験の創作、応募の代行は行わない。」のような一文を求める。
+INTRO_CLOSER_PATTERN = re.compile(r"(?:行わない|出さない)。(?:\*\*)?\s*\Z")
+
+# 段階を束ねたスキルは、依頼と参照の対応表を `## 進め方` に持つ。その場合は
+# 段階ごとの references が各自の成果物仕様を持つため、report-format.md を求めない。
+# 表なら何でも免除にすると、普通のスキルが入力例の表を置くだけで出力形式の規則を
+# 外せてしまう。行が references/ へ振り分けていること、振り分け先が2つ以上あることを
+# 確かめ、段階を束ねた形になっているものだけを免除する。
+ROUTING_ROW_PATTERN = re.compile(r"^\|.*\]\((references/[^)]+\.md)\).*\|\s*$", re.M)
+ROUTING_TABLE_MIN_ROWS = 2
 BOUNDARY_PROMISE_PATTERN = re.compile(r"自動実行しない|本人が行う")
 
 # 実在する個人の応募書類をサンプルとして公開してしまう事故を止めるための最低限の検査。
@@ -112,7 +129,9 @@ def validate_skill(path: Path) -> list[str]:
     if license_name is not None and license_name not in ALLOWED_LICENSES:
         problems.append("license must be MIT or omitted for this repository")
 
-    problems.extend(check_boundary_section(path.read_text(encoding="utf-8")))
+    text = path.read_text(encoding="utf-8")
+    problems.extend(check_boundary_section(text))
+    problems.extend(check_structure(path, text))
 
     return [f"{relative}: {problem}" for problem in problems]
 
@@ -133,6 +152,55 @@ def check_boundary_section(text: str) -> list[str]:
             "on the user's behalf (自動実行しない / 本人が行う)"
         ]
     return []
+
+
+def routes_to_stages(procedure: str) -> bool:
+    """`## 進め方` が、依頼を段階ごとの参照へ振り分ける表になっているか調べる。"""
+    destinations = set(ROUTING_ROW_PATTERN.findall(procedure))
+    return len(destinations) >= ROUTING_TABLE_MIN_ROWS
+
+
+def check_structure(path: Path, text: str) -> list[str]:
+    """節の並びと、冒頭の非対象宣言、出力雛形とスクリプトの置き場所を確かめる。"""
+    problems: list[str] = []
+    body = re.sub(r"\A---\n.*?\n---\n", "", text, count=1, flags=re.S)
+
+    headings = tuple(f"## {name.strip()}" for name in re.findall(r"^## (.+)$", body, re.M))
+    if headings != REQUIRED_SECTIONS:
+        expected = " / ".join(REQUIRED_SECTIONS)
+        problems.append(
+            f"body must have exactly these sections in order: {expected} "
+            f"(found: {' / '.join(headings) if headings else 'none'})"
+        )
+
+    intro_match = re.search(r"^# .+?\n(.*?)(?=^## |\Z)", body, re.S | re.M)
+    intro = intro_match.group(1).strip() if intro_match else ""
+    if not intro:
+        problems.append("body must open with a paragraph between the title and the first section")
+    elif not INTRO_CLOSER_PATTERN.search(intro):
+        problems.append(
+            "opening paragraph must close by naming what the skill does not do "
+            "(a sentence ending in 行わない。 or 出さない。)"
+        )
+
+    procedure_match = re.search(r"^## 進め方\n(.*?)(?=^## |\Z)", body, re.S | re.M)
+    procedure = procedure_match.group(1) if procedure_match else ""
+
+    # 出力の雛形は references/report-format.md に置く。段階を束ねたスキルだけ免除する。
+    report_format = path.parent / "references" / "report-format.md"
+    if not report_format.exists() and not routes_to_stages(procedure):
+        problems.append(
+            f"references/report-format.md is required unless 進め方 routes requests to "
+            f"{ROUTING_TABLE_MIN_ROWS} or more per-stage references with a table"
+        )
+
+    # 同梱スクリプトは専用の節ではなく、それを使う工程として案内する。
+    scripts_dir = path.parent / "scripts"
+    for script in sorted(scripts_dir.glob("*.py")) if scripts_dir.is_dir() else []:
+        if script.name != VENDORED_COMMON_NAME and script.name not in procedure:
+            problems.append(f"scripts/{script.name} must be introduced from within 進め方")
+
+    return problems
 
 
 def scan_personal_data(path: Path) -> list[str]:

@@ -39,3 +39,55 @@
 既存記事3本の改善案を作る。事実関係の根拠、構成上の問題、改善理由を各記事に添え、公開操作と新規記事の制作は対象外とする。候補者の時間は説明1時間、調査・作成6時間、合同レビュー2時間、修正2時間、振り返り1時間の計12時間。週6時間・2週間の案とし、企業は開始前に対象記事を提供し、第1週末に途中確認する。
 
 企業が時間単価を提示している場合、その単価×12時間が予定額となる。単価や契約形態はこの例では未定。企業担当者も説明・合同レビュー・振り返りの計4時間に加え、資料準備の時間を確保できるか確認する。修正は合意した範囲で1回・計2時間を見込み、超えそうなら追加着手前に範囲・費用・日程を相談する。いずれも提案であり標準単価・標準工数ではない。
+
+## スクリプト入力
+
+`scripts/plan_trial_work.py` は計画を実働・期間・費用の数字に直すだけで、採用の成否も候補者の適性も判定しない。
+
+```json
+{
+  "as_of": "2026-09-17",
+  "plan": {
+    "label": "架空の記事改善おためし業務",
+    "candidate_weekly_hours": 6,
+    "period": {"start": "2026-10-01", "end": "2026-10-14", "checkpoint": "第1週末に途中確認"}
+  },
+  "tasks": [
+    {"label": "説明", "kind": "learning", "paid": true, "candidate_hours": 1, "company_hours": 1},
+    {"label": "改善案の作成", "kind": "company_work", "paid": true, "candidate_hours": 6, "candidate_hours_max": 8},
+    {"label": "合同レビュー", "kind": "company_work", "paid": true, "candidate_hours": 2, "company_hours": 2},
+    {"label": "資料準備", "kind": "company_work", "paid": true, "company_hours": 2}
+  ],
+  "compensation": {
+    "basis": "hourly",
+    "hourly_rate": 2000,
+    "expenses_included": false,
+    "tax_treatment": "源泉徴収の有無を確認する",
+    "payment_date": "2026-11-30"
+  },
+  "budget": {"amount": 30000, "includes_expenses": false},
+  "revisions": {"rounds": 1, "hours": 2},
+  "conditions": [{"topic": "報酬", "value": "時間単価2000円", "agreement": "internal_draft"}]
+}
+```
+
+- `kind` は `learning`（見学・学習）/ `mock`（模擬課題）/ `company_work`（企業の実務）/ `unknown`。**企業の実務を `learning` にしない。** `company_work` が `"paid": false` だと注意が出る。
+- `paid` は有償枠かどうか。決めていないなら省略する。省略は「未定」であって無償ではない。**予定費用は `"paid": true` の作業だけで計算する。** 無償と未定の時間は別に出るので、説明や会議を無償枠へ移して予算を合わせると数字に表れる。
+- `candidate_hours` は候補者の実働、`company_hours` は企業担当者の工数。**合同作業は双方に入れる。** 資料準備のような企業単独の作業は `company_hours` だけに入れる。この2つは合計されない。
+- 見積もりに幅があるときだけ `candidate_hours_max` を足す。予算との突き合わせは上限側で行う。
+- `basis` は `hourly` / `fixed` / `unknown`。単価が未定なら `hourly_rate` を省略する。**相場を創作しない。**
+- `budget.amount` は今回の予算。省略すると「未入力」として注意が出る。
+- `revisions` は修正の回数と時間の範囲。「納得するまで」のように上限がないものは省略し、具体化すべき項目として扱う。**修正なしで合意しているなら `{"rounds": 0, "hours": 0}` と書く。** 省略（未定）と0（合意済み）は別物である。
+- `agreement` は `internal_draft`（企業の内部案）/ `offered`（候補者に提示済み）/ `candidate_request` / `mutual` / `unconfirmed`。**`internal_draft` と `unconfirmed` を、提示済みや合意済みとして募集文・返信文に書かない。**
+
+実行:
+
+```bash
+python3 scripts/plan_trial_work.py input.json
+```
+
+出力の `workload` は実働の内訳（有償・無償・未定を分けた時間と、企業担当者の工数）、`schedule` は期間に配置したときの週あたりの実働、`cost` は予定費用と時間換算、`budget` は予算との差、`flags` は候補者に提示する前に確認すべき点。期間だけを延ばしても `cost` は変わらない。
+
+時間換算は2通り出る。`effective_hourly_paid_*` は予定費用を**有償時間**で割ったもの、`effective_hourly_all_*` は**無償の作業も含めた候補者の全実働**で割ったものである。説明や会議を無償枠へ移すほど後者は下がるので、帳尻合わせが数字に表れる。
+
+見積もりの欠けた作業があるうちは、予算に収まるか（`budget.over`）と週あたりの実働が収まるか（`fits_candidate_availability`）を判定せず `null` にする。`budget.decidable` が `false` のとき、予算内と読まない。

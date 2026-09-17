@@ -1,6 +1,6 @@
 ---
 name: otameshi-employer
-description: Help employers use Otameshi Tenshoku to draft trial listings and applicant replies, design learning visits or paid trial assignments, define scope, workload, duration and compensation, and prepare evidence-based feedback. Use when a hiring manager wants to recruit for, host, budget, adjust or review an otameshi work experience; job-seeker applications belong to otameshi-candidate.
+description: Help employers use Otameshi Tenshoku to draft trial listings and applicant replies, design learning visits or paid trial assignments, define scope, workload, duration and compensation, and prepare evidence-based feedback. Use when a hiring manager wants to recruit for, host, budget, adjust or review an otameshi work experience; do not use to judge an applicant's aptitude or predict hiring outcomes, to state market rates, legal, tax, or service conditions from memory, or to post a listing, contact a candidate, or confirm a contract on the user's behalf. Job-seeker applications belong to otameshi-candidate.
 license: MIT
 metadata:
   author: ficilcom
@@ -8,7 +8,7 @@ metadata:
 
 # おためし転職：企業の募集と受け入れ設計
 
-企業が何に対していくら支払い、どの程度の仕事を期待できるかを検討できる計画を作る。候補者も仕事・協働・働き方を確かめられるよう、説明と支援を含めて設計する。企業の課題、募集原稿、応募内容、チャット、体験メモの必要な部分から着手する。
+企業が何に対していくら支払い、どの程度の仕事を期待できるかを検討できる計画を作る。候補者も仕事・協働・働き方を確かめられるよう、説明と支援を含めて設計する。企業の課題、募集原稿、応募内容、チャット、体験メモの必要な部分から着手する。候補者の適性や採用の成否の判定、相場・法令・サービス条件の記憶による断定、掲載や連絡の代行は行わない。
 
 ## 進め方
 
@@ -23,9 +23,10 @@ metadata:
 | 体験後に評価・返信したい | [振り返り](references/debrief.md)：職務に関係する観察事実、支援状況、未確認事項、フィードバック案 |
 | 料金・契約・支払い・キャンセル・無償掲載可否が判断に関わる | [公式情報の確認](references/source-checks.md)：出典と時点、説明の差、確認先と質問 |
 
-4. 募集文は実際の業務と体験内容、必要な経験、支援、時間・期間、報酬から作る。仮案を決定済みの条件にせず、内部検討用の案と掲載用の下書きを区別する。企業の魅力、採用後の条件、候補者の実績を創作しない。
-5. 応募者への返信では、職務要件と応募内容を照合し、経験の接点・不明点・確認質問を示す。本人が述べていない能力を推測せず、職務と無関係な個人属性で順位や合否を決めない。追加の業務や日時は提案として書き、本人が同意した扱いにしない。
-6. 原稿・計画に必要な確認事項と次の担当・時期を添える。条件は企業案／候補者希望／提示済み／双方合意／未確認を分け、合意には根拠を添える。成果の評価、報酬の支払い、継続・採用の判断は分ける。
+4. 作業と時間が置けたら、`python3 scripts/plan_trial_work.py <input.json>` で、候補者の実働と企業担当者の工数、期間に配置したときの週あたりの実働、予定費用と予算との差を機械的に出す。入力形式は [有償業務](references/paid-work.md#スクリプト入力) を見る。**予算に合わせて実働を削らず、説明や会議を無償枠へ移して帳尻を合わせない。** 予算が足りなければ範囲縮小・予算増額・期間変更を並べ、期間だけ延ばしても総額が変わらないことを示す。
+5. 募集文は実際の業務と体験内容、必要な経験、支援、時間・期間、報酬から作る。仮案を決定済みの条件にせず、内部検討用の案と掲載用の下書きを区別する。企業の魅力、採用後の条件、候補者の実績を創作しない。
+6. 応募者への返信では、職務要件と応募内容を照合し、経験の接点・不明点・確認質問を示す。本人が述べていない能力を推測せず、職務と無関係な個人属性で順位や合否を決めない。追加の業務や日時は提案として書き、本人が同意した扱いにしない。
+7. 原稿・計画に必要な確認事項と次の担当・時期を添える。条件は企業案／候補者希望／提示済み／双方合意／未確認を分け、合意には根拠を添える。成果の評価、報酬の支払い、継続・採用の判断は分ける。
 
 ## 判断上の制約
 
