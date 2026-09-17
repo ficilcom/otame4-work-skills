@@ -131,7 +131,7 @@
 - `compensation.basis` は `fixed` / `hourly` / `per_deliverable` / `unknown`。`hourly` なら `hourly_rate`、`per_deliverable` なら `unit_amount` と `units` を入れる。`expenses_borne_by_worker` は自分が負担する経費の見込み額。`withholding` は源泉徴収の有無（`true` / `false` / `null`）、`consumption_tax` は `included` / `excluded` / `unknown`。**税額と手取りは計算しない。**
 - `payment.reference_term_days` は、受領日から支払期日までの日数として参照する上限で、**一次情報で確認した値だけを入れる。** 入れなければ比較しない。
 - `availability` は、この案件に出せる週あたりの時間と、使える週数。
-- `revisions` は修正の回数と時間の上限。どちらかが `null` なら範囲が開いているとして扱う。
+- `revisions` は修正の回数と時間の上限。どちらかが `null` なら範囲が開いているとして扱う。成果物を納めない案件では `items` で `revision_limit` を `applicable: false` にする。その場合、範囲が開いているという注意は出ない。
 
 実行:
 

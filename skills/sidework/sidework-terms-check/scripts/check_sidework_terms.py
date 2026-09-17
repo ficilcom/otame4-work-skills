@@ -518,7 +518,10 @@ def collect_flags(
             "判断に関わるなら一次情報で確認して入れ直す",
         )
 
-    if revisions["rounds"] is None or revisions["hours"] is None:
+    revision_item = next(entry for entry in checklist if entry["code"] == "revision_limit")
+    if revision_item["applicable"] is not False and (
+        revisions["rounds"] is None or revisions["hours"] is None
+    ):
         add(
             "revision_scope_open_ended",
             "修正の回数または時間の上限が未確認である。有限の範囲に具体化する確認事項にする",

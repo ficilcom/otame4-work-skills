@@ -42,34 +42,43 @@ ITEM_STATUSES = ("stated", "missing", "unclear", "unknown")
 TOUCH_VALUES = ("yes", "no", "unknown")
 APPLICATION_STATUSES = ("ready", "draft", "missing")
 
-# 申請・届出が要らない規定の型。ここでは申請材料を数えない。
-NO_APPLICATION_REGIMES = ("prohibited", "silent")
+# 申請・届出そのものが成り立つ規定の型。禁止と規定なしには手続きがない。
+APPLICATION_REGIMES = ("permission", "notification")
+# 許可の判断基準と取消の条件は、許可制のときだけ確認できる。
+PERMISSION_REGIME = ("permission",)
 
 # (code, label, group, requires)
-# requires は None（常に対象）、("status", 値)、("engagement", 値) のいずれか。
-# 値が unknown のときは対象かどうかを判定せず、対象として扱ったうえで注記する。
-CHECKLIST: tuple[tuple[str, str, str, tuple[str, str] | None], ...] = (
+# requires は None（常に対象）、または (基準, 対象になる値) の組で、基準は
+# `status` / `engagement` / `regime` のいずれか。基準になる値が unknown のときは
+# 対象かどうかを判定せず、対象として扱ったうえで注記する。
+CHECKLIST: tuple[tuple[str, str, str, tuple[str, tuple[str, ...]] | None], ...] = (
     ("sidework_clause", "副業・兼業に関する定めの有無と本文", "rules", None),
     ("regime_type", "禁止・許可制・届出制の別と、その条件", "rules", None),
     ("scope_of_rule", "規定が対象にする範囲", "rules", None),
     ("sanctions", "定めに反したときの取扱い", "rules", None),
-    ("public_servant_permission", "許可・承認の要否と根拠規定", "rules", ("status", "public_servant")),
-    ("application_procedure", "申請・届出の様式、提出先、時期", "procedure", None),
-    ("approval_criteria", "許可・受理の判断基準", "procedure", None),
-    ("revocation_conditions", "許可の取消・変更の条件", "procedure", None),
-    ("ongoing_report", "開始後の報告義務", "procedure", None),
+    ("public_servant_permission", "許可・承認の要否と根拠規定", "rules", ("status", ("public_servant",))),
+    ("application_procedure", "申請・届出の様式、提出先、時期", "procedure", ("regime", APPLICATION_REGIMES)),
+    ("approval_criteria", "許可・受理の判断基準", "procedure", ("regime", PERMISSION_REGIME)),
+    ("revocation_conditions", "許可の取消・変更の条件", "procedure", ("regime", PERMISSION_REGIME)),
+    ("ongoing_report", "開始後の報告義務", "procedure", ("regime", APPLICATION_REGIMES)),
     ("competition_clause", "競業避止に関する定め", "duty", None),
     ("confidentiality_clause", "秘密保持の対象と範囲", "duty", None),
     ("dedication_clause", "職務専念・勤務時間中の取扱い", "duty", None),
     ("asset_use_clause", "会社の設備、データ、アカウントの利用", "duty", None),
+    ("reputation_clause", "会社の信用・名称・肩書の使用に関する定め", "duty", None),
     ("ip_clause", "職務に関する成果物・発明の取扱い", "duty", None),
     ("customer_clause", "取引先・顧客に関する制限", "duty", None),
-    ("hours_aggregation", "労働時間の通算と割増賃金の扱い", "external", ("engagement", "employment")),
-    ("employment_insurance", "雇用保険の扱い", "external", ("engagement", "employment")),
+    ("hours_aggregation", "労働時間の通算と割増賃金の扱い", "external", ("engagement", ("employment",))),
+    ("employment_insurance", "雇用保険の扱い", "external", ("engagement", ("employment",))),
     ("social_insurance", "健康保険・厚生年金の適用と届出", "external", None),
     ("workers_accident", "労災、通勤災害の扱い", "external", None),
     ("tax_filing", "確定申告と住民税の扱い", "external", None),
-    ("liability_insurance", "賠償責任を誰が負うか", "external", ("engagement", "contract_work")),
+    (
+        "liability_insurance",
+        "賠償責任を誰が負うか",
+        "external",
+        ("engagement", ("contract_work", "own_business")),
+    ),
 )
 CHECKLIST_CODES = {code for code, _, _, _ in CHECKLIST}
 
@@ -80,7 +89,7 @@ TOUCHPOINTS: tuple[tuple[str, str, str], ...] = (
     ("uses_employer_information", "本業で知った情報や資料を使う", "confidentiality_clause"),
     ("uses_employer_assets", "会社の設備、回線、アカウントを使う", "asset_use_clause"),
     ("during_work_hours", "勤務時間中に連絡や作業が発生する", "dedication_clause"),
-    ("uses_employer_name", "勤務先の名前や在籍を出して活動する", "ip_clause"),
+    ("uses_employer_name", "勤務先の名前や在籍を出して活動する", "reputation_clause"),
 )
 TOUCHPOINT_KEYS = {key for key, _, _ in TOUCHPOINTS}
 
@@ -206,23 +215,25 @@ def parse_application(raw: object) -> dict[str, str]:
     return parsed
 
 
-def item_applies(requires: tuple[str, str] | None, status: str, engagement: str) -> bool | None:
+def item_applies(
+    requires: tuple[str, tuple[str, ...]] | None, status: str, engagement: str, regime: str
+) -> bool | None:
     """項目が対象かどうか。基準になる値が未確認なら None（判定しない）を返す。"""
     if requires is None:
         return True
-    kind, expected = requires
-    actual = status if kind == "status" else engagement
+    kind, accepted = requires
+    actual = {"status": status, "engagement": engagement, "regime": regime}[kind]
     if actual == "unknown":
         return None
-    return actual == expected
+    return actual in accepted
 
 
 def build_checklist(
-    items: dict[str, dict[str, Any]], status: str, engagement: str
+    items: dict[str, dict[str, Any]], status: str, engagement: str, regime: str
 ) -> list[dict[str, Any]]:
     checklist = []
     for code, label, group, requires in CHECKLIST:
-        applies = item_applies(requires, status, engagement)
+        applies = item_applies(requires, status, engagement, regime)
         entry = items.get(code)
         checklist.append(
             {
@@ -287,8 +298,13 @@ def build_hours(hours: dict[str, Any], engagement: str) -> dict[str, Any]:
 
 def build_application(
     application: dict[str, str], regime: str
-) -> tuple[list[dict[str, Any]], bool]:
-    required = regime not in NO_APPLICATION_REGIMES
+) -> tuple[list[dict[str, Any]], bool | None]:
+    """申請材料の一覧と、それが要るかどうかを返す。
+
+    規定の型が未確認のときは要否も決まらないため None を返す。対象外（禁止・
+    規定なし）と混同しない。
+    """
+    required = None if regime == "unknown" else regime in APPLICATION_REGIMES
     entries = [
         {
             "code": code,
@@ -308,7 +324,7 @@ def collect_flags(
     touchpoints: list[dict[str, Any]],
     hours: dict[str, Any],
     application: list[dict[str, Any]],
-    application_required: bool,
+    application_required: bool | None,
 ) -> list[dict[str, Any]]:
     flags, add = flag_collector()
 
@@ -432,7 +448,7 @@ def collect_flags(
     elif hours["rest_days_per_week"] is None:
         add("rest_days_unknown", "本業も副業もしない日の数が入っていない")
 
-    if application_required:
+    if application_required is not False:
         not_ready = [entry["code"] for entry in application if entry["status"] != "ready"]
         if not_ready:
             add(
@@ -455,7 +471,7 @@ def check(payload: object) -> dict[str, Any]:
     items = parse_items(data.get("items"))
     application_input = parse_application(data.get("application"))
 
-    checklist = build_checklist(items, status, engagement)
+    checklist = build_checklist(items, status, engagement, rules["regime"])
     touchpoints = [
         {"key": key, "label": label, "state": sidework[key], "clause": clause}
         for key, label, clause in TOUCHPOINTS
@@ -487,7 +503,7 @@ def check(payload: object) -> dict[str, Any]:
             "touchpoints_yes": sum(1 for point in touchpoints if point["state"] == "yes"),
             "touchpoints_unknown": sum(1 for point in touchpoints if point["state"] == "unknown"),
             "application_ready": sum(1 for entry in application if entry["status"] == "ready"),
-            "application_total": len(application) if application_required else 0,
+            "application_total": len(application) if application_required is not False else 0,
         },
         "flags": collect_flags(
             status,

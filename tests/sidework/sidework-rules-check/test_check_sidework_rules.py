@@ -54,6 +54,10 @@ def entry(report, code):
     return next(item for item in report["checklist"] if item["code"] == code)
 
 
+def flag_items(report, code):
+    return next((item.get("items", []) for item in report["flags"] if item["code"] == code), [])
+
+
 class EvidenceTest(unittest.TestCase):
     def test_reading_the_rules_clears_the_evidence_flag(self):
         self.assertNotIn("rules_not_reviewed", codes(MODULE.check(payload())))
@@ -119,6 +123,38 @@ class ApplicabilityTest(unittest.TestCase):
         employed = MODULE.check(payload(engagement="employment"))
         self.assertIs(entry(employed, "hours_aggregation")["applicable"], True)
 
+    def test_liability_covers_a_side_business_as_well_as_contract_work(self):
+        for engagement in ("contract_work", "own_business"):
+            with self.subTest(engagement=engagement):
+                report = MODULE.check(payload(engagement=engagement))
+                self.assertIs(entry(report, "liability_insurance")["applicable"], True)
+        employed = MODULE.check(payload(engagement="employment"))
+        self.assertIs(entry(employed, "liability_insurance")["applicable"], False)
+
+    def test_approval_items_apply_only_under_a_permission_regime(self):
+        permission = MODULE.check(
+            payload(rules={"source": "employment_rules", "reviewed": True, "regime": "permission"})
+        )
+        self.assertIs(entry(permission, "approval_criteria")["applicable"], True)
+        self.assertIs(entry(permission, "revocation_conditions")["applicable"], True)
+        notification = MODULE.check(payload())
+        self.assertIs(entry(notification, "approval_criteria")["applicable"], False)
+        self.assertIs(entry(notification, "revocation_conditions")["applicable"], False)
+
+    def test_a_prohibition_puts_every_procedure_item_out_of_scope(self):
+        report = MODULE.check(
+            payload(rules={"source": "employment_rules", "reviewed": True, "regime": "prohibited"})
+        )
+        for code in ("application_procedure", "approval_criteria", "revocation_conditions", "ongoing_report"):
+            with self.subTest(code=code):
+                self.assertIs(entry(report, code)["applicable"], False)
+        self.assertNotIn("application_procedure", flag_items(report, "items_unconfirmed"))
+
+    def test_procedure_items_stay_in_scope_while_the_regime_is_unknown(self):
+        report = MODULE.check(payload(rules={"source": "employment_rules", "reviewed": True}))
+        self.assertIsNone(entry(report, "application_procedure")["applicable"])
+        self.assertIn("application_procedure", flag_items(report, "applicability_undecidable"))
+
     def test_an_unknown_engagement_leaves_applicability_undecided(self):
         report = MODULE.check(payload(engagement="unknown"))
         self.assertIsNone(entry(report, "hours_aggregation")["applicable"])
@@ -137,6 +173,12 @@ class TouchpointTest(unittest.TestCase):
         report = MODULE.check(payload(sidework={}))
         self.assertIn("touchpoints_unknown", codes(report))
         self.assertEqual(report["summary"]["touchpoints_unknown"], 6)
+
+    def test_using_the_employer_name_points_at_the_reputation_clause(self):
+        report = MODULE.check(payload(sidework={"uses_employer_name": "yes"}))
+        point = next(item for item in report["touchpoints"] if item["key"] == "uses_employer_name")
+        self.assertEqual(point["clause"], "reputation_clause")
+        self.assertIs(entry(report, "reputation_clause")["applicable"], True)
 
     def test_unknown_touchpoint_keys_are_rejected(self):
         with self.assertRaises(ValueError):
@@ -264,9 +306,21 @@ class ApplicationTest(unittest.TestCase):
         report = MODULE.check(
             payload(rules={"source": "employment_rules", "reviewed": True, "regime": "prohibited"})
         )
-        self.assertFalse(report["application_required"])
+        self.assertIs(report["application_required"], False)
         self.assertNotIn("application_facts_missing", codes(report))
         self.assertEqual(report["summary"]["application_total"], 0)
+
+    def test_rules_without_a_side_work_clause_do_not_ask_for_application_material(self):
+        report = MODULE.check(
+            payload(rules={"source": "employment_rules", "reviewed": True, "regime": "silent"})
+        )
+        self.assertIs(report["application_required"], False)
+        self.assertNotIn("application_facts_missing", codes(report))
+
+    def test_an_unknown_regime_keeps_the_application_material_in_view(self):
+        report = MODULE.check(payload(rules={"source": "employment_rules", "reviewed": True}))
+        self.assertIsNone(report["application_required"])
+        self.assertIn("application_facts_missing", codes(report))
 
 
 class OutputContractTest(unittest.TestCase):

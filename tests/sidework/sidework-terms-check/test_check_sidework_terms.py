@@ -120,6 +120,15 @@ class ScopeTest(unittest.TestCase):
         report = MODULE.check(payload(revisions={"rounds": None, "hours": None}))
         self.assertIn("revision_scope_open_ended", codes(report))
 
+    def test_work_without_a_deliverable_is_not_warned_about_revisions(self):
+        report = MODULE.check(
+            payload(
+                revisions={"rounds": None, "hours": None},
+                items=[{"code": "revision_limit", "status": "missing", "applicable": False}],
+            )
+        )
+        self.assertNotIn("revision_scope_open_ended", codes(report))
+
 
 class HoursTest(unittest.TestCase):
     def test_unpaid_work_is_counted_as_hours(self):
