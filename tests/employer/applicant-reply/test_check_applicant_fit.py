@@ -118,6 +118,12 @@ class ReplyTest(unittest.TestCase):
         self.assertEqual(flag(report, "decline_before_confirming")["items"], ["editing"])
         self.assertEqual(report["readiness"]["status"], "needs_work")
 
+    def test_declining_on_an_omission_in_the_application_blocks(self):
+        evidence = [{"requirement": "editing", "status": "not_shown", "source": "application"}]
+        report = MODULE.check(payload(evidence=evidence, reply={"purpose": "decline", "includes": ["reason_for_decline"]}))
+        self.assertEqual(flag(report, "decline_before_confirming")["items"], ["editing"])
+        self.assertEqual(report["readiness"]["status"], "needs_work")
+
     def test_declining_on_confirmed_facts_is_allowed(self):
         evidence = [{"requirement": "editing", "status": "not_shown", "source": "interview"}]
         report = MODULE.check(payload(evidence=evidence, reply={"purpose": "decline", "includes": ["reason_for_decline"]}))

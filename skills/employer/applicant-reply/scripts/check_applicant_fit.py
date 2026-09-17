@@ -28,6 +28,9 @@ EVIDENCE_STATUSES = ("shown", "partial", "not_shown", "unknown")
 # 根拠の出所。`assumed` は応募者が述べていない推測で、根拠として数えない。
 EVIDENCE_SOURCES = ("application", "profile", "portfolio", "chat", "interview", "assumed", "unknown")
 STATED_BY_CANDIDATE = ("application", "profile", "portfolio", "chat", "interview")
+# 「書かれていない」を「持っていない」と確認できるのは、本人に直接聞いた出所だけ。
+# 応募文やプロフィールに書かれていないのは省略であり、確認済みの否定ではない。
+CONFIRMED_NEGATIVE_SOURCES = ("interview", "chat")
 REPLY_PURPOSES = ("invite", "ask", "hold", "decline", "unknown")
 # 返信案に入れようとしているもの。混ぜてはいけないものを見つけるための語彙。
 REPLY_CONTENTS = (
@@ -270,15 +273,26 @@ def collect_flags(
         for item in coverage
         if item["required"] and item["job_related"] and item["status"] == "not_shown"
     ]
+    # 書面に書かれていないだけの必須要件。本人に聞くまでは辞退の根拠にならない。
+    omitted_required = [
+        item["code"]
+        for item in coverage
+        if item["required"]
+        and item["job_related"]
+        and item["status"] == "not_shown"
+        and item["source"] not in CONFIRMED_NEGATIVE_SOURCES
+    ]
 
     purpose = reply["purpose"]
     if purpose == "decline":
-        if open_required:
+        unconfirmed = open_required + omitted_required
+        if unconfirmed:
             add(
                 "decline_before_confirming",
-                "確認していない必須要件があるのに辞退の返信にしている。先に確認質問を送る。"
-                "辞退にするのは、確認済みの事実だけを理由にできる場合に限る",
-                open_required,
+                "確認していない必須要件があるのに辞退の返信にしている。応募文に書かれていないだけの要件は"
+                "本人に聞くまで否定にならない。先に確認質問を送り、辞退にするのは確認済みの事実だけを"
+                "理由にできる場合に限る",
+                unconfirmed,
             )
         if not_job_related:
             add("decline_reason_not_job_related", "辞退の理由に職務と無関係な属性を含めない")

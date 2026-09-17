@@ -33,6 +33,10 @@ def codes(report):
     return {flag["code"] for flag in report["flags"]}
 
 
+def flag(report, code):
+    return next(item for item in report["flags"] if item["code"] == code)
+
+
 class TotalsTest(unittest.TestCase):
     def test_keeps_cash_and_internal_cost_apart(self):
         report = MODULE.summarize(payload())
@@ -114,6 +118,20 @@ class CompanyHoursTest(unittest.TestCase):
     def test_lists_roles_without_an_estimate(self):
         report = MODULE.summarize(payload(company_hours=[{"role": "説明"}]))
         self.assertEqual(report["company_hours"]["unestimated_roles"], ["説明"])
+
+    def test_an_unestimated_role_keeps_the_internal_cost_and_comparison_open(self):
+        hours = [{"role": "受け入れ担当", "hours": 4, "hourly_cost": 4000}, {"role": "レビュー", "hourly_cost": 4000}]
+        report = MODULE.summarize(payload(company_hours=hours, budget={"amount": 30000, "includes_company_hours": True}))
+        self.assertIsNone(report["company_hours"]["internal_cost"])
+        self.assertIsNone(report["totals"]["budget"]["over"])
+        self.assertFalse(report["totals"]["budget"]["decidable"])
+        self.assertEqual(flag(report, "company_hours_incomplete")["items"], ["レビュー"])
+
+    def test_an_unspecified_budget_scope_is_not_decided(self):
+        report = MODULE.summarize(payload(budget={"amount": 30000}))
+        self.assertIsNone(report["totals"]["budget"]["compared_on"])
+        self.assertIsNone(report["totals"]["budget"]["over"])
+        self.assertIn("budget_scope_unknown", codes(report))
 
 
 class CandidatePayTest(unittest.TestCase):

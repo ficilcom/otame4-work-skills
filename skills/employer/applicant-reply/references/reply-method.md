@@ -68,7 +68,7 @@
 ```
 
 - `requirements` は募集文の要件。`required` の省略は必須として扱う。`job_related` を `false` にすると、照合と質問から外れ、募集文の修正点として注意が出る。
-- `evidence` は要件ごとの応募内容の確認結果。`status` は `shown` / `partial` / `not_shown` / `unknown`。`source` は `application` / `profile` / `portfolio` / `chat` / `interview` / `assumed` / `unknown`。**`assumed`（推測）は根拠にならず、`unknown` に戻される。**
+- `evidence` は要件ごとの応募内容の確認結果。`status` は `shown` / `partial` / `not_shown` / `unknown`。`source` は `application` / `profile` / `portfolio` / `chat` / `interview` / `assumed` / `unknown`。**`assumed`（推測）は根拠にならず、`unknown` に戻される。** `not_shown` は、出所が `interview` か `chat`（本人に直接聞いた）のときだけ「持っていない」の確認になる。応募文やプロフィールに書かれていないだけなら省略として扱い、辞退の根拠にしない。
 - `reply.purpose` は `invite` / `ask` / `hold` / `decline` / `unknown`。`reply.includes` は返信案に入れようとしているもので、`questions` / `next_step` / `conditions` / `other_candidates` / `internal_notes` / `new_work` / `new_dates` / `reason_for_decline` から選ぶ。
 - `reasoning` は、利用者が返信の判断に使おうとしている理由のうち募集文にないもの。`non_job_attributes` に年齢や家族構成など職務と無関係な属性が入っていれば、判断に使わないよう注意が出る。`compares_other_candidates` が `true` なら、比較を返信に持ち込まないよう注意が出る。募集文にそうした要件が書かれている場合は、`requirements` 側で `job_related: false` にする。
 - `proposals` は返信で出す提案。`agreed` が `true` でないのに `presented_as` が `agreed` なら注意が出る。

@@ -152,10 +152,10 @@ def build_candidate_pay(pay: dict[str, Any]) -> dict[str, Any]:
 def build_company_hours(entries: list[dict[str, Any]]) -> dict[str, Any]:
     known = [entry for entry in entries if entry["hours"] is not None]
     total = sum((entry["hours"] for entry in known), Decimal(0)) if known else None
-    # 金額化は、すべての工数に原価が入っているときだけ行う。一部だけの金額化は
-    # 社内工数を小さく見せるので、欠けていれば None のままにする。
+    # 金額化は、すべての役割に工数と原価が入っているときだけ行う。一部だけの金額化は
+    # 社内工数を小さく見せるので、見積もりや原価が欠けた役割があれば None のままにする。
     costed = None
-    if known and all(entry["hourly_cost"] is not None for entry in known):
+    if known and len(known) == len(entries) and all(entry["hourly_cost"] is not None for entry in known):
         costed = sum((entry["hours"] * entry["hourly_cost"] for entry in known), Decimal(0))
     return {
         "total_hours": as_hours(total),
@@ -226,8 +226,14 @@ def build_totals(
 
     comparison = None
     if budget is not None and budget["amount"] is not None:
-        basis = "with_internal_cost" if budget["includes_company_hours"] else "cash"
-        compared = with_internal_high if basis == "with_internal_cost" else cash_high
+        scope = budget["includes_company_hours"]
+        # 予算が社内工数まで含むかが決まるまで、どちらの額とも比べない。
+        basis = None if scope is None else ("with_internal_cost" if scope else "cash")
+        compared = (
+            None
+            if basis is None
+            else (with_internal_high if basis == "with_internal_cost" else cash_high)
+        )
         over = (
             None
             if compared is None or other["_has_unknown"] or not expenses_known
@@ -276,6 +282,12 @@ def collect_flags(
 
     if company["total_hours"] is None:
         add("company_hours_missing", "企業担当者の工数が入っていない。説明・レビュー・振り返りの時間を見積もり、社内説明に入れる")
+    elif company["unestimated_roles"]:
+        add(
+            "company_hours_incomplete",
+            "工数が入っていない役割がある。合計は入力済みの役割だけの値で、金額化と予算との比較は保留にしている",
+            company["unestimated_roles"],
+        )
     elif company["internal_cost"] is None:
         add(
             "company_hours_not_costed",
@@ -292,6 +304,11 @@ def collect_flags(
     budget = totals["budget"]
     if budget is None:
         add("budget_not_set", "予算が入っていない。既存の枠がなく申請額を決める資料なら、現金の額を申請額として示す")
+    elif budget["compared_on"] is None:
+        add(
+            "budget_scope_unknown",
+            "予算が社内工数の金額化まで含むかが入っていない。決まるまで予算に収まるかを判定していない",
+        )
     elif budget["decidable"] is False:
         add("budget_undecidable", "支払い・費用に未確定があるため、予算に収まるかを判定していない")
     elif budget["over"] is True:

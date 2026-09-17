@@ -146,6 +146,16 @@ class TextTest(unittest.TestCase):
         report = MODULE.check(payload(listing=listing, items=[]))
         self.assertNotIn("unpaid_as_prerequisite", findings(report))
 
+    def test_inclusive_nationality_wording_is_not_flagged(self):
+        listing = {"kind": "paid_work", "text": "国籍不問。年齢不問。"}
+        report = MODULE.check(payload(listing=listing))
+        self.assertNotIn("personal_attribute", findings(report))
+
+    def test_exclusionary_nationality_wording_is_flagged(self):
+        listing = {"kind": "paid_work", "text": "日本国籍の方のみ。"}
+        report = MODULE.check(payload(listing=listing))
+        self.assertEqual(findings(report)["personal_attribute"]["matched"], ["日本国籍の方"])
+
     def test_age_bands_and_household_roles_are_caught(self):
         listing = {"kind": "paid_work", "text": "30代までの方、主婦歓迎。"}
         report = MODULE.check(payload(listing=listing))
