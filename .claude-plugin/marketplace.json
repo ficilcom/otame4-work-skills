@@ -112,6 +112,23 @@
         "career",
         "offer"
       ]
+    },
+    {
+      "name": "otame4-sidework",
+      "description": "Side work alongside a main job: reading the employer's own rules on whether side work is prohibited, needs permission, or only a notification, and checking what a gyomu-itaku assignment has actually put in writing about scope, fee, payment due date, and rights. (2 skills)",
+      "version": "0.1.0",
+      "source": "./skills/sidework",
+      "skills": [
+        "./sidework-rules-check",
+        "./sidework-terms-check"
+      ],
+      "category": "productivity",
+      "tags": [
+        "agent-skills",
+        "otame4",
+        "sidework",
+        "freelance"
+      ]
     }
   ]
 }

@@ -21,6 +21,7 @@ CATEGORIES: tuple[str, ...] = (
     "research",
     "offer",
     "trial",
+    "sidework",
 )
 
 SKILLS_DIR = ROOT / "skills"

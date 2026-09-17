@@ -36,6 +36,11 @@
       "title": "内定・退職・入社準備",
       "description": "内定条件の確認・比較、辞退、退職と入社の準備。Offer decisions and transition planning.",
       "skills": ["offer-terms-check", "offer-comparison", "offer-decline", "resignation-plan"]
+    },
+    {
+      "title": "副業の可否・案件条件",
+      "description": "就業規則の副業規定の確認と申請材料、業務委託案件の条件と報酬の確認。Side work rules and assignment terms.",
+      "skills": ["sidework-rules-check", "sidework-terms-check"]
     }
   ]
 }
