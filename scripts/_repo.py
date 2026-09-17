@@ -24,6 +24,10 @@ CATEGORIES: tuple[str, ...] = (
 )
 
 SKILLS_DIR = ROOT / "skills"
+
+# 各スキルへ配る共通モジュールのファイル名。スキル同梱のスクリプトを数えるとき、
+# この生成物は「そのスキルが持つスクリプト」に含めない。
+VENDORED_COMMON_NAME = "_common.py"
 MARKETPLACE_FILE = ROOT / ".claude-plugin" / "marketplace.json"
 README_FILE = ROOT / "README.md"
 SKILLS_SH_FILE = ROOT / "skills.sh.json"

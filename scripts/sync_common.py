@@ -15,11 +15,9 @@ import argparse
 import sys
 from pathlib import Path
 
+from _repo import ROOT, SKILLS_DIR, VENDORED_COMMON_NAME as VENDORED_NAME
 
-ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "scripts" / "_common_source.py"
-SKILLS_DIR = ROOT / "skills"
-VENDORED_NAME = "_common.py"
 
 BANNER = """# ---------------------------------------------------------------------------
 # 生成物。直接編集しない。

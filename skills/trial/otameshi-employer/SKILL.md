@@ -1,6 +1,6 @@
 ---
 name: otameshi-employer
-description: Help employers use Otameshi Tenshoku to draft trial listings and applicant replies, design learning visits or paid trial assignments, define scope, workload, duration and compensation, and prepare evidence-based feedback. Use when a hiring manager wants to recruit for, host, budget, adjust or review an otameshi work experience; job-seeker applications belong to otameshi-candidate.
+description: Help employers use Otameshi Tenshoku to draft trial listings and applicant replies, design learning visits or paid trial assignments, define scope, workload, duration and compensation, and prepare evidence-based feedback. Use when a hiring manager wants to recruit for, host, budget, adjust or review an otameshi work experience; do not use to judge an applicant's aptitude or predict hiring outcomes, to state market rates, legal, tax, or service conditions from memory, or to post a listing, contact a candidate, or confirm a contract on the user's behalf. Job-seeker applications belong to otameshi-candidate.
 license: MIT
 metadata:
   author: ficilcom
@@ -8,7 +8,7 @@ metadata:
 
 # おためし転職：企業の募集と受け入れ設計
 
-企業が何に対していくら支払い、どの程度の仕事を期待できるかを検討できる計画を作る。候補者も仕事・協働・働き方を確かめられるよう、説明と支援を含めて設計する。企業の課題、募集原稿、応募内容、チャット、体験メモの必要な部分から着手する。
+企業が何に対していくら支払い、どの程度の仕事を期待できるかを検討できる計画を作る。候補者も仕事・協働・働き方を確かめられるよう、説明と支援を含めて設計する。企業の課題、募集原稿、応募内容、チャット、体験メモの必要な部分から着手する。候補者の適性や採用の成否の判定、相場・法令・サービス条件の記憶による断定、掲載や連絡の代行は行わない。
 
 ## 進め方
 
