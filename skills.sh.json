@@ -9,8 +9,8 @@
     },
     {
       "title": "おためし転職・企業",
-      "description": "募集文、受け入れ、有償業務の仕事量・期間・報酬設計。Trial hiring for employers.",
-      "skills": ["otameshi-employer"]
+      "description": "業務設計、募集文、社内説明、応募者対応、業務委託の条件明示、振り返り。Trial hiring for employers.",
+      "skills": ["trial-work-design", "trial-listing-draft", "trial-budget-brief", "applicant-reply", "trial-contract-terms", "trial-feedback"]
     },
     {
       "title": "自己分析・転職相談",

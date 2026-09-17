@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from _loader import load_script, run_script, script_path  # noqa: E402
 
 
-SCRIPT_PATH = "skills/trial/otameshi-employer/scripts/plan_trial_work.py"
+SCRIPT_PATH = "skills/employer/trial-work-design/scripts/plan_trial_work.py"
 SCRIPT = script_path(SCRIPT_PATH)
 MODULE = load_script(SCRIPT_PATH)
 

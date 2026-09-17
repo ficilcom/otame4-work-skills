@@ -2,19 +2,18 @@
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "otame4-work-skills",
   "version": "0.1.0",
-  "description": "Practical Agent Skills for Japanese job hunting and career change: self-analysis, document review, interviews, company research, offer decisions, and Otameshi Tenshoku trial planning for candidates and employers.",
+  "description": "Practical Agent Skills for Japanese job hunting and career change: self-analysis, document review, interviews, company research, offer decisions, Otameshi Tenshoku trial planning for candidates, and the employer side of a trial from work design and listing to applicant replies, contract terms and feedback.",
   "owner": {
     "name": "ficilcom"
   },
   "plugins": [
     {
       "name": "otame4-trial",
-      "description": "Otameshi Tenshoku for candidates and employers: applications, listings, learning visits, paid work scope, workload, duration, compensation, and trial feedback. (2 skills)",
+      "description": "Otameshi Tenshoku for job seekers: applications, clarifying trial conditions, learning visits, paid trial work scope, workload, duration, compensation, and the post-trial decision. (1 skill)",
       "version": "0.1.0",
       "source": "./skills/trial",
       "skills": [
-        "./otameshi-candidate",
-        "./otameshi-employer"
+        "./otameshi-candidate"
       ],
       "category": "productivity",
       "tags": [
@@ -22,6 +21,28 @@
         "otame4",
         "trial",
         "recruiting"
+      ]
+    },
+    {
+      "name": "otame4-employer",
+      "description": "Otameshi Tenshoku for employers: designing the trial work and its cost, drafting and checking the listing, making the internal budget case, replying to applicants, stating gyomu-itaku terms in writing before the start, and debriefing with feedback that keeps settlement apart from evaluation. (6 skills)",
+      "version": "0.1.0",
+      "source": "./skills/employer",
+      "skills": [
+        "./applicant-reply",
+        "./trial-budget-brief",
+        "./trial-contract-terms",
+        "./trial-feedback",
+        "./trial-listing-draft",
+        "./trial-work-design"
+      ],
+      "category": "productivity",
+      "tags": [
+        "agent-skills",
+        "otame4",
+        "trial",
+        "recruiting",
+        "employer"
       ]
     },
     {
