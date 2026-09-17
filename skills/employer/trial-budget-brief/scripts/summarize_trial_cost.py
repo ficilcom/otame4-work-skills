@@ -213,6 +213,7 @@ def build_totals(
     pay_low, pay_high = candidate["_pay"]
     expenses = Decimal(candidate["expenses"]) if candidate["expenses"] is not None else Decimal(0)
 
+    expenses_known = candidate["expenses"] is not None
     cash_low = cash_high = None
     if pay_low is not None:
         cash_low = pay_low + expenses + other["_total"]
@@ -227,7 +228,11 @@ def build_totals(
     if budget is not None and budget["amount"] is not None:
         basis = "with_internal_cost" if budget["includes_company_hours"] else "cash"
         compared = with_internal_high if basis == "with_internal_cost" else cash_high
-        over = None if compared is None or other["_has_unknown"] else compared > budget["amount"]
+        over = (
+            None
+            if compared is None or other["_has_unknown"] or not expenses_known
+            else compared > budget["amount"]
+        )
         comparison = {
             "budget": round_yen(budget["amount"]),
             "compared_on": basis,
@@ -240,7 +245,7 @@ def build_totals(
     return {
         "cash_min": round_yen(cash_low),
         "cash_max": round_yen(cash_high),
-        "cash_is_complete": cash_low is not None and not other["_has_unknown"],
+        "cash_is_complete": cash_low is not None and not other["_has_unknown"] and expenses_known,
         "with_internal_cost_min": round_yen(with_internal_low),
         "with_internal_cost_max": round_yen(with_internal_high),
         "budget": comparison,
@@ -266,6 +271,9 @@ def collect_flags(
     if kind == "paid_work" and candidate["basis"] == "none":
         add("paid_work_without_pay", "有償業務なのに候補者への支払いがない。実務は経験にかかわらず有償枠にする")
 
+    if candidate["expenses"] is None and candidate["basis"] != "none":
+        add("candidate_expenses_unknown", "候補者の経費（交通費など）の扱いが入っていない。負担しないなら 0 と書く")
+
     if company["total_hours"] is None:
         add("company_hours_missing", "企業担当者の工数が入っていない。説明・レビュー・振り返りの時間を見積もり、社内説明に入れる")
     elif company["internal_cost"] is None:
@@ -283,7 +291,7 @@ def collect_flags(
 
     budget = totals["budget"]
     if budget is None:
-        add("budget_not_set", "予算が入っていない。総額と予算の突き合わせをしていない")
+        add("budget_not_set", "予算が入っていない。既存の枠がなく申請額を決める資料なら、現金の額を申請額として示す")
     elif budget["decidable"] is False:
         add("budget_undecidable", "支払い・費用に未確定があるため、予算に収まるかを判定していない")
     elif budget["over"] is True:

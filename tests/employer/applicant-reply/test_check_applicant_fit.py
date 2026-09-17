@@ -86,13 +86,22 @@ class QuestionsTest(unittest.TestCase):
         self.assertEqual(question["requirement"], "editing")
         self.assertIn("書いていないだけか", question["why"])
 
-    def test_a_preferred_item_not_written_is_not_asked(self):
+    def test_a_preferred_item_not_written_is_an_optional_question(self):
         evidence = [
             {"requirement": "editing", "status": "shown", "source": "application"},
             {"requirement": "cms", "status": "not_shown", "source": "application"},
         ]
         report = MODULE.check(payload(evidence=evidence))
-        self.assertEqual(report["questions"], [])
+        self.assertEqual(len(report["questions"]), 1)
+        self.assertFalse(report["questions"][0]["required"])
+        self.assertEqual(report["readiness"]["status"], "ready_for_owner_review")
+
+    def test_personal_attributes_in_the_reasoning_block(self):
+        report = MODULE.check(payload(reasoning={"non_job_attributes": ["年齢"], "compares_other_candidates": True}))
+        self.assertEqual(flag(report, "decision_uses_personal_attribute")["items"], ["年齢"])
+        self.assertIn("decision_uses_personal_attribute", report["readiness"]["blockers"])
+        self.assertIn("decision_compares_other_candidates", codes(report))
+        self.assertNotIn("decision_compares_other_candidates", report["readiness"]["blockers"])
 
     def test_non_job_requirements_are_excluded_and_flagged(self):
         requirements = payload()["requirements"] + [{"code": "age", "label": "30代", "job_related": False}]
@@ -115,10 +124,10 @@ class ReplyTest(unittest.TestCase):
         self.assertNotIn("decline_before_confirming", codes(report))
         self.assertEqual(report["readiness"]["status"], "ready_for_owner_review")
 
-    def test_a_decline_without_a_reason_is_noted_but_not_blocked(self):
+    def test_a_decline_without_a_reason_is_the_users_choice(self):
         evidence = [{"requirement": "editing", "status": "not_shown", "source": "interview"}]
         report = MODULE.check(payload(evidence=evidence, reply={"purpose": "decline"}))
-        self.assertIn("decline_without_reason", codes(report))
+        self.assertNotIn("decline_without_reason", codes(report))
         self.assertEqual(report["readiness"]["status"], "ready_for_owner_review")
 
     def test_a_decline_touching_a_non_job_attribute_blocks(self):
@@ -163,6 +172,12 @@ class ProposalsAndAvailabilityTest(unittest.TestCase):
 
     def test_enough_availability_is_silent(self):
         report = MODULE.check(payload(availability={"candidate_weekly_hours": 6, "required_weekly_hours": 6}))
+        self.assertNotIn("availability_short", codes(report))
+        self.assertNotIn("availability_not_compared", codes(report))
+
+    def test_half_known_availability_is_not_compared(self):
+        report = MODULE.check(payload(availability={"candidate_weekly_hours": 4}))
+        self.assertIn("availability_not_compared", codes(report))
         self.assertNotIn("availability_short", codes(report))
 
 

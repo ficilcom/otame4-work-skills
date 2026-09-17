@@ -16,7 +16,7 @@ def payload(**overrides):
     base = {
         "as_of": "2026-09-17",
         "trial": {"label": "架空の記事改善", "kind": "paid_work"},
-        "candidate_pay": {"basis": "hourly", "hourly_rate": 2000, "hours": 12},
+        "candidate_pay": {"basis": "hourly", "hourly_rate": 2000, "hours": 12, "expenses": 0},
         "company_hours": [
             {"role": "受け入れ担当", "hours": 4, "hourly_cost": 4000},
             {"role": "資料準備", "hours": 2, "hourly_cost": 4000},
@@ -59,7 +59,7 @@ class TotalsTest(unittest.TestCase):
         self.assertIn("over_budget", codes(report))
 
     def test_uses_the_upper_estimate(self):
-        report = MODULE.summarize(payload(candidate_pay={"basis": "hourly", "hourly_rate": 2000, "hours": 12, "hours_max": 16}))
+        report = MODULE.summarize(payload(candidate_pay={"basis": "hourly", "hourly_rate": 2000, "hours": 12, "hours_max": 16, "expenses": 0}))
         self.assertEqual(report["totals"]["cash_max"], 32000)
         self.assertTrue(report["totals"]["budget"]["over"])
 
@@ -80,6 +80,12 @@ class TotalsTest(unittest.TestCase):
         self.assertIsNone(report["totals"]["budget"]["over"])
         self.assertIn("other_costs_unknown", codes(report))
         self.assertIn("budget_undecidable", codes(report))
+
+    def test_unknown_candidate_expenses_keep_the_cash_total_open(self):
+        report = MODULE.summarize(payload(candidate_pay={"basis": "hourly", "hourly_rate": 2000, "hours": 12}))
+        self.assertFalse(report["totals"]["cash_is_complete"])
+        self.assertIsNone(report["totals"]["budget"]["over"])
+        self.assertIn("candidate_expenses_unknown", codes(report))
 
     def test_an_estimated_cost_counts_but_is_flagged(self):
         other = [{"label": "交通費", "amount": 2000, "source": "estimate"}]

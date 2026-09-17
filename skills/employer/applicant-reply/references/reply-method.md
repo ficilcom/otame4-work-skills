@@ -59,6 +59,7 @@
     {"requirement": "weekday", "status": "partial", "source": "chat", "note": "水曜のみ可"}
   ],
   "reply": {"purpose": "ask", "includes": ["questions", "next_step"]},
+  "reasoning": {"non_job_attributes": [], "compares_other_candidates": false},
   "proposals": [
     {"topic": "合同レビューを水曜に固定", "agreed": false, "presented_as": "proposal"}
   ],
@@ -69,13 +70,17 @@
 - `requirements` は募集文の要件。`required` の省略は必須として扱う。`job_related` を `false` にすると、照合と質問から外れ、募集文の修正点として注意が出る。
 - `evidence` は要件ごとの応募内容の確認結果。`status` は `shown` / `partial` / `not_shown` / `unknown`。`source` は `application` / `profile` / `portfolio` / `chat` / `interview` / `assumed` / `unknown`。**`assumed`（推測）は根拠にならず、`unknown` に戻される。**
 - `reply.purpose` は `invite` / `ask` / `hold` / `decline` / `unknown`。`reply.includes` は返信案に入れようとしているもので、`questions` / `next_step` / `conditions` / `other_candidates` / `internal_notes` / `new_work` / `new_dates` / `reason_for_decline` から選ぶ。
+- `reasoning` は、利用者が返信の判断に使おうとしている理由のうち募集文にないもの。`non_job_attributes` に年齢や家族構成など職務と無関係な属性が入っていれば、判断に使わないよう注意が出る。`compares_other_candidates` が `true` なら、比較を返信に持ち込まないよう注意が出る。募集文にそうした要件が書かれている場合は、`requirements` 側で `job_related: false` にする。
 - `proposals` は返信で出す提案。`agreed` が `true` でないのに `presented_as` が `agreed` なら注意が出る。
-- `availability` は応募者の週の稼働と、計画の週の実働。少なければ、辞退ではなく調整案を添えるよう注意が出る。
+- `availability` は応募者の週の稼働と、計画の週の実働。少なければ、辞退ではなく調整案を添えるよう注意が出る。計画の週の実働が分からなければ、利用者に確かめる。どちらかが欠けたままなら比較しない。
+- 歓迎要件が応募内容に書かれていない場合（`not_shown`）も質問の候補に出るが、`required: false` が付く。聞くかどうかは利用者が決め、応募の判断には使わない。
 
-実行:
+実行は標準入力から渡すのを既定にする。応募内容をファイルに残さないためである。ファイルに書いた場合は `python3 scripts/check_applicant_fit.py input.json` で読み、終わったら消す。
 
 ```bash
-python3 scripts/check_applicant_fit.py input.json
+python3 scripts/check_applicant_fit.py <<'JSON'
+{"requirements": [{"code": "editing", "label": "記事編集の経験"}], "evidence": [], "reply": {"purpose": "ask"}}
+JSON
 ```
 
 出力の `summary` は必須要件の確認状況の数、`coverage` は要件ごとの確認結果、`questions` は確認質問にする要件、`readiness` は返信案としてどこまで進められるか、`flags` は送る前に直す点である。`readiness.status` が `ready_for_owner_review` でも、送信は利用者が行う。

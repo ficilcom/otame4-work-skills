@@ -78,13 +78,16 @@
 - `expectations` は完了基準。`agreed_before_start` を省略すると「事前に合意していない」として扱い、事前の基準と分けて数える。`result` は `met` / `partial` / `not_met` / `unverified`（確認しなかった）。**未確認を `not_met` にしない。**
 - `observations` は観察事実。`expectation` で事前の基準に結びつける。`source` は `observed`（担当者自身が見た）/ `artifact`（成果物で確認）/ `hearsay`（伝聞）/ `unknown`。`job_related` を `false` にすると評価から外れ、注意が出る。
 - `support` は企業の支援。`status` は `provided` / `late` / `not_provided` / `unknown`。`affected` に影響した基準のコードを入れると、その基準の未達を候補者だけの責任にしないよう注意が出る。
-- `settlement` は精算。`basis` は `hourly` / `fixed` / `none` / `unknown`。`acceptance_criteria_in_writing` は書面の検収基準があるか。`proposed_reduction` は減額を考えている額で、書面の基準がなければ注意が出る。`unpaid_rework_requested` は無償のやり直しを求めているか。
-- `feedback.next_step` は `continue` / `hire_offer` / `more_checks` / `close` / `undecided`。`next_step_decided` が `true` でないのに継続や採用の通知にしようとすると注意が出る。`includes` はフィードバック案に入れようとしているもので、`facts` / `support_gaps` / `other_candidates` / `internal_notes` / `continuation_promise` / `hire_promise` から選ぶ。
+- `settlement` は精算。`basis` は `hourly` / `fixed` / `none` / `unknown`。`acceptance_criteria_in_writing` は書面の検収基準があるか。`proposed_reduction` は減額を考えている額で、額が決まっていなければ `true` を入れる。書面の基準がなければ注意が出る。`unpaid_rework_requested` は無償のやり直しを求めているか。支払時期・支払主体は `trial-contract-terms` で決めた条件に従い、契約条件がなければ報告に「未記載・要確認」と書く。
+- `feedback.next_step` は企業が選ぼうとしている次の対応で、`continue` / `hire_offer` / `more_checks` / `close` / `undecided`。`next_step_decided` はそれが決定済みか。決まっていないのに `continue` や `hire_offer` を通知にしようとすると注意が出る。`includes` はフィードバック案の文面に入れようとしているもので、`facts` / `support_gaps` / `other_candidates` / `internal_notes` / `continuation_promise` / `hire_promise` から選ぶ。「次もお願いするかも」のような含みは `continuation_promise` にあたり、決定前なら別の注意が出る。次の対応の選択と文面の約束は別の問題なので、両方入れると注意も2つ出る。
+- 基準に結びつかない職務上の観察は、`expectation` を省略して入れる。評価の根拠にはならないが、報告の第3節に基準外の事実として書く。
 
-実行:
+実行は標準入力から渡すのを既定にする。実施メモをファイルに残さないためである。ファイルに書いた場合は `python3 scripts/review_trial.py input.json` で読み、終わったら消す。
 
 ```bash
-python3 scripts/review_trial.py input.json
+python3 scripts/review_trial.py <<'JSON'
+{"trial": {"kind": "paid_work"}, "expectations": [], "observations": [], "settlement": {"basis": "hourly"}}
+JSON
 ```
 
 出力の `summary` は事前の基準と後から足した期待の数、結果の内訳、支援の遅れの数、`expectations` は基準ごとの観察数と支援の影響、`settlement` は実施済みの実働に対する精算額（評価とは別）、`readiness` はフィードバック案としてどこまで進められるか、`flags` は送る前に直す点である。`readiness.status` が `ready_for_owner_review` でも、送信・精算・採用の判断は利用者が行う。

@@ -56,13 +56,14 @@
     {"label": "説明", "kind": "learning", "paid": true, "candidate_hours": 1, "company_hours": 1},
     {"label": "改善案の作成", "kind": "company_work", "paid": true, "candidate_hours": 6, "candidate_hours_max": 8},
     {"label": "合同レビュー", "kind": "company_work", "paid": true, "candidate_hours": 2, "company_hours": 2},
+    {"label": "修正（合意した範囲で1回）", "kind": "company_work", "paid": true, "candidate_hours": 2},
+    {"label": "振り返り", "kind": "learning", "paid": true, "candidate_hours": 1, "company_hours": 1},
     {"label": "資料準備", "kind": "company_work", "paid": true, "company_hours": 2}
   ],
   "compensation": {
     "basis": "hourly",
     "hourly_rate": 2000,
     "expenses_included": false,
-    "tax_treatment": "源泉徴収の有無を確認する",
     "payment_date": "2026-11-30"
   },
   "budget": {"amount": 30000, "includes_expenses": false},
@@ -71,13 +72,16 @@
 }
 ```
 
-- `kind` は `learning`（見学・学習）/ `mock`（模擬課題）/ `company_work`（企業の実務）/ `unknown`。**企業の実務を `learning` にしない。** `company_work` が `"paid": false` だと注意が出る。
+- `kind` は `learning`（見学・学習）/ `mock`（模擬課題）/ `company_work`（企業の実務）/ `unknown`。**企業の実務を `learning` にしない。** `company_work` が `"paid": false` だと注意が出る。資料準備のような企業単独の作業も、その実務に属するなら `company_work` でよい。
+- **修正と振り返りも作業として入れる。** `revisions` は修正の範囲が閉じているかを見るだけで、時間を合計に足さない。修正の実働は `tasks` に入れないと予定費用から抜ける。
 - `paid` は有償枠かどうか。決めていないなら省略する。省略は「未定」であって無償ではない。**予定費用は `"paid": true` の作業だけで計算する。** 無償と未定の時間は別に出るので、説明や会議を無償枠へ移して予算を合わせると数字に表れる。
 - `candidate_hours` は候補者の実働、`company_hours` は企業担当者の工数。**合同作業は双方に入れる。** 資料準備のような企業単独の作業は `company_hours` だけに入れる。この2つは合計されない。
 - 見積もりに幅があるときだけ `candidate_hours_max` を足す。予算との突き合わせは上限側で行う。
-- `basis` は `hourly` / `fixed` / `unknown`。単価が未定なら `hourly_rate` を省略する。**相場を創作しない。**
+- `basis` は `hourly` / `fixed` / `none`（無償の見学・学習）/ `unknown`。単価が未定なら `hourly_rate` を省略する。**相場を創作しない。** `none` の計画に `company_work` があれば注意が出る。`none` なら予算の突き合わせと修正範囲の注意は出ない。
+- `expenses_included` と `tax_treatment` は決まった扱いだけを書く。「確認する」のような未確認の文言を入れると決まった扱いに見えるので、未確認なら省略する。
 - `budget.amount` は今回の予算。省略すると「未入力」として注意が出る。
-- `revisions` は修正の回数と時間の範囲。「納得するまで」のように上限がないものは省略し、具体化すべき項目として扱う。**修正なしで合意しているなら `{"rounds": 0, "hours": 0}` と書く。** 省略（未定）と0（合意済み）は別物である。
+- `revisions` は修正の回数と時間の範囲。「納得するまで」のように上限がないものは省略し、具体化すべき項目として扱う。**修正なしで合意しているなら `{"rounds": 0, "hours": 0}` と書く。** 省略（未定）と0（合意済み）は別物である。見学・学習だけの計画では省略してよい。
+- `plan.period` の日付が未定なら、仮の開始日を置き、仮であることを報告に書く。1週間に満たない期間（1日の見学会など）は、その週に全実働が入るものとして週あたりの値を出す。
 - `agreement` は `internal_draft`（企業の内部案）/ `offered`（候補者に提示済み）/ `candidate_request` / `mutual` / `unconfirmed`。**`internal_draft` と `unconfirmed` を、提示済みや合意済みとして募集文・返信文に書かない。**
 
 実行:

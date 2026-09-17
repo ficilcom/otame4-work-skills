@@ -124,6 +124,12 @@ class SettlementTest(unittest.TestCase):
         report = MODULE.review(payload(settlement=settlement))
         self.assertIn("reduction_without_written_criteria", report["readiness"]["blockers"])
 
+    def test_a_reduction_without_an_amount_still_blocks(self):
+        settlement = payload()["settlement"] | {"proposed_reduction": True, "acceptance_criteria_in_writing": False}
+        report = MODULE.review(payload(settlement=settlement))
+        self.assertEqual(report["settlement"]["proposed_reduction"], "unspecified")
+        self.assertIn("reduction_without_written_criteria", report["readiness"]["blockers"])
+
     def test_a_reduction_with_written_criteria_is_a_note(self):
         settlement = payload()["settlement"] | {"proposed_reduction": 4000}
         report = MODULE.review(payload(settlement=settlement))

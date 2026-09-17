@@ -124,11 +124,22 @@ def parse_settlement(raw: object) -> dict[str, Any]:
         "acceptance_criteria_in_writing": optional_bool(
             block.get("acceptance_criteria_in_writing"), "settlement.acceptance_criteria_in_writing"
         ),
-        "proposed_reduction": optional_number(block.get("proposed_reduction"), "settlement.proposed_reduction"),
+        # 減額を考えているか。額が決まっていなければ true だけを入れる。
+        "proposed_reduction": _reduction(block.get("proposed_reduction")),
         "unpaid_rework_requested": optional_bool(
             block.get("unpaid_rework_requested"), "settlement.unpaid_rework_requested"
         ),
     }
+
+
+def _reduction(value: object) -> Any:
+    """減額の額（数値）、額未定の減額（True）、減額なし（None / False）を受け取る。"""
+    if value is None or value is False:
+        return None
+    if value is True:
+        return "unspecified"
+    amount = optional_number(value, "settlement.proposed_reduction")
+    return amount if amount and amount > 0 else None
 
 
 def parse_feedback(raw: object) -> dict[str, Any]:
@@ -182,7 +193,11 @@ def build_settlement(settlement: dict[str, Any]) -> dict[str, Any]:
         "hours_planned": float(settlement["hours_planned"]) if settlement["hours_planned"] is not None else None,
         "amount_for_work_done": round_yen(due),
         "acceptance_criteria_in_writing": settlement["acceptance_criteria_in_writing"],
-        "proposed_reduction": round_yen(settlement["proposed_reduction"]),
+        "proposed_reduction": (
+            settlement["proposed_reduction"]
+            if settlement["proposed_reduction"] == "unspecified"
+            else round_yen(settlement["proposed_reduction"])
+        ),
         "unpaid_rework_requested": settlement["unpaid_rework_requested"],
         # 精算は評価や採用判断と別に扱う。ここに評価の結果を入れない。
         "separate_from_evaluation": True,
@@ -230,7 +245,7 @@ def collect_flags(
         add("observation_not_job_related", "職務と無関係な観察がある。評価にもフィードバックにも使わない", not_job)
     unlinked = [obs["fact"] for obs in observations if obs["expectation"] is None and obs["job_related"]]
     if unlinked:
-        add("observations_unlinked", "事前の基準に結びついていない観察がある。基準外の事実として分けて書く", unlinked)
+        add("observations_unlinked", "事前の基準に結びつかない観察がある。評価の根拠にせず、基準外の事実として第3節に分けて書く", unlinked)
 
     if kind == "learning_visit":
         met_like = [item["code"] for item in expectations if item["result"] in ("partial", "not_met")]
@@ -242,7 +257,7 @@ def collect_flags(
             add("settlement_basis_unknown", "報酬の決め方が入っていない。実施済みの実働に対する精算額を出していない")
         elif settlement["amount_for_work_done"] is None:
             add("settlement_incomplete", "単価か実働が入っていない。精算額を出していない")
-        if settlement["proposed_reduction"] is not None and settlement["proposed_reduction"] > 0:
+        if settlement["proposed_reduction"] is not None:
             if settlement["acceptance_criteria_in_writing"] is not True:
                 add(
                     "reduction_without_written_criteria",
@@ -251,7 +266,11 @@ def collect_flags(
             else:
                 add("reduction_proposed", "減額を考えている。書面の検収基準のどの項目に沿うかを示し、候補者に説明できる形にする")
         if settlement["unpaid_rework_requested"] is True:
-            add("unpaid_rework", "無償のやり直しを求めている。合意した修正範囲を超える分は追加の発注にするか、求めない")
+            add(
+                "unpaid_rework",
+                "無償のやり直しを求めている。合意した修正範囲内の修正は実働として報酬に含め、"
+                "範囲を超える分は追加の発注にするか、求めない",
+            )
 
     if "other_candidates" in feedback["includes"]:
         add("feedback_mentions_other_candidates", "他候補者の情報をフィードバックに入れない")

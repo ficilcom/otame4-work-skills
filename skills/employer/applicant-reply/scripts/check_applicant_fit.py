@@ -112,6 +112,20 @@ def parse_reply(raw: object) -> dict[str, Any]:
     }
 
 
+def parse_reasoning(raw: object) -> dict[str, Any]:
+    """利用者が返信の判断に使おうとしている理由のうち、募集文にないものを受け取る。"""
+    block = require_object(raw if raw is not None else {}, "reasoning")
+    attributes = require_list(block.get("non_job_attributes", []) or [], "reasoning.non_job_attributes")
+    return {
+        "non_job_attributes": [
+            require_text(item, f"reasoning.non_job_attributes[{index}]") for index, item in enumerate(attributes)
+        ],
+        "compares_other_candidates": optional_bool(
+            block.get("compares_other_candidates"), "reasoning.compares_other_candidates"
+        ),
+    }
+
+
 def parse_proposals(raw: object) -> list[dict[str, Any]]:
     entries = require_list(raw if raw is not None else [], "proposals")
     parsed = []
@@ -183,13 +197,17 @@ def build_questions(coverage: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "why": "一部しか示されていない" if item["status"] == "partial" else "応募内容から確認できていない",
                 }
             )
-        elif item["status"] == "not_shown" and item["required"]:
+        elif item["status"] == "not_shown":
             questions.append(
                 {
                     "requirement": item["code"],
                     "label": item["label"],
-                    "required": True,
-                    "why": "応募内容に書かれていない。書いていないだけか、経験がないかを確かめる",
+                    "required": item["required"],
+                    "why": (
+                        "応募内容に書かれていない。書いていないだけか、経験がないかを確かめる"
+                        if item["required"]
+                        else "歓迎要件で、応募内容に書かれていない。聞くかどうかは利用者が決める。応募の判断には使わない"
+                    ),
                 }
             )
     return questions
@@ -212,10 +230,23 @@ def build_summary(coverage: list[dict[str, Any]]) -> dict[str, Any]:
 def collect_flags(
     coverage: list[dict[str, Any]],
     reply: dict[str, Any],
+    reasoning: dict[str, Any],
     proposals: list[dict[str, Any]],
     availability: dict[str, Any] | None,
 ) -> list[dict[str, Any]]:
     flags, add = flag_collector("items")
+
+    if reasoning["non_job_attributes"]:
+        add(
+            "decision_uses_personal_attribute",
+            "職務と無関係な属性を返信の判断に使おうとしている。照合にも文面にも使わず、募集の要件だけで判断する",
+            reasoning["non_job_attributes"],
+        )
+    if reasoning["compares_other_candidates"] is True:
+        add(
+            "decision_compares_other_candidates",
+            "他候補者との比較を判断に使っている。比較するなら候補者ごとに同じ照合表を作って並べ、返信には持ち込まない",
+        )
 
     assumed = [item["code"] for item in coverage if item["assumed"]]
     if assumed:
@@ -245,17 +276,12 @@ def collect_flags(
         if open_required:
             add(
                 "decline_before_confirming",
-                "確認していない必須要件があるのに辞退の返信にしている。先に確認質問を送るか、"
-                "確認済みの理由だけで判断する",
+                "確認していない必須要件があるのに辞退の返信にしている。先に確認質問を送る。"
+                "辞退にするのは、確認済みの事実だけを理由にできる場合に限る",
                 open_required,
             )
         if not_job_related:
             add("decline_reason_not_job_related", "辞退の理由に職務と無関係な属性を含めない")
-        if "reason_for_decline" not in reply["includes"]:
-            add(
-                "decline_without_reason",
-                "辞退の返信に理由が入っていない。書くかどうかは利用者が決め、書くなら募集の要件に照らした事実だけにする",
-            )
     elif purpose == "invite":
         if open_required or not_shown_required:
             add(
@@ -285,7 +311,13 @@ def collect_flags(
     if availability is not None:
         needed = availability["required_weekly_hours"]
         offered = availability["candidate_weekly_hours"]
-        if needed is not None and offered is not None and offered < needed:
+        if needed is None or offered is None:
+            add(
+                "availability_not_compared",
+                "応募者の週の稼働と計画の週の実働のどちらかが入っていない。計画の実働は利用者に確かめ、"
+                "稼働だけを理由に判断しない",
+            )
+        elif offered < needed:
             add(
                 "availability_short",
                 "応募者の週の稼働が計画の週の実働より少ない。範囲を減らすか期間を延ばす案を返信に添え、"
@@ -298,6 +330,7 @@ def collect_flags(
 def decide_readiness(reply: dict[str, Any], flags: list[dict[str, Any]]) -> dict[str, Any]:
     blocking_codes = {
         "assumed_evidence",
+        "decision_uses_personal_attribute",
         "decline_before_confirming",
         "decline_reason_not_job_related",
         "reply_mentions_other_candidates",
@@ -321,13 +354,14 @@ def check(payload: object) -> dict[str, Any]:
     codes = {requirement["code"] for requirement in requirements}
     evidence = parse_evidence(data.get("evidence"), codes)
     reply = parse_reply(data.get("reply"))
+    reasoning = parse_reasoning(data.get("reasoning"))
     proposals = parse_proposals(data.get("proposals"))
     availability = parse_availability(data.get("availability"))
 
     coverage = build_coverage(requirements, evidence)
     questions = build_questions(coverage)
     summary = build_summary(coverage)
-    flags = collect_flags(coverage, reply, proposals, availability)
+    flags = collect_flags(coverage, reply, reasoning, proposals, availability)
     readiness = decide_readiness(reply, flags)
 
     return {

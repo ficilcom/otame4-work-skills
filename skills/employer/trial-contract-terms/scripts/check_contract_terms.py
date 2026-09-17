@@ -28,7 +28,8 @@ from _common import (
 
 
 ENGAGEMENTS = ("contract_work", "employment", "unknown")
-# 条件をどの形で示すか。`none` はまだ何も書いていない状態。
+# 条件をどの形で示すか。`none` はまだ候補者に何も伝えていない状態。チャットや口頭で
+# 伝えた条件があるなら `chat` / `verbal` にし、書面でない扱いとして数える。
 DOCUMENT_FORMS = ("contract", "purchase_order", "email", "platform", "chat", "verbal", "none", "unknown")
 TERM_SOURCES = tuple(form for form in DOCUMENT_FORMS if form != "none")
 # 書面、または書面に準じるものとして数える。チャットと口頭は含めない。
@@ -321,13 +322,28 @@ def collect_flags(
 
     revision_item = next(item for item in checklist if item["code"] == "revision_limit")
     if revision_item["applicable"] is not False:
-        if revisions["rounds"] is None or revisions["hours"] is None:
+        # 回数0は「修正なしで合意した」であり、時間の上限がなくても範囲は閉じている。
+        no_revisions = revisions["rounds"] == 0
+        if not no_revisions and (revisions["rounds"] is None or revisions["hours"] is None):
             add(
                 "revision_scope_open_ended",
                 "修正の回数または時間の上限を決めていない。「納得するまで」を、確認できる品質と有限の修正範囲に具体化する",
             )
-        if revisions["unpaid"] is True and (revisions["hours"] or 0) > 0:
+        if revisions["unpaid"] is True and not no_revisions:
             add("unpaid_revisions", "修正を無償にしている。合意した範囲の修正は実働として報酬に含めるか、範囲外として扱う")
+
+    # 成果への満足で支払いや減額を判断するつもりなら、検収の基準と担当が書面にあることが前提になる。
+    inspection = next(item for item in checklist if item["code"] == "inspection")
+    if money["conditional_on_outcome"] is True and inspection["status"] != "stated":
+        add(
+            "inspection_missing_for_quality_judgement",
+            "成果で支払いを判断しようとしているのに、検収の基準・担当・期日が書面にない。"
+            "書面の検収基準がなければ減額の根拠にならない",
+        )
+
+    after_trial = next(item for item in checklist if item["code"] == "after_trial")
+    if after_trial["status"] != "stated":
+        add("after_trial_unstated", "体験後の扱い（採用や継続を保証しないこと）が書かれていないか未確認である")
 
     if termination["company_may_terminate"] is True and termination["candidate_may_terminate"] is False:
         add("termination_one_sided", "中途解除の定めが企業側だけにある。候補者側の解除と予告も定める")
@@ -353,6 +369,7 @@ def decide_readiness(flags: list[dict[str, Any]]) -> dict[str, Any]:
         "payment_term_exceeds_reference",
         "revision_scope_open_ended",
         "termination_one_sided",
+        "inspection_missing_for_quality_judgement",
     }
     blockers = [flag["code"] for flag in flags if flag["code"] in blocking_codes]
     return {

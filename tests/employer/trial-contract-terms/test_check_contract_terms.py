@@ -132,6 +132,20 @@ class MoneyTest(unittest.TestCase):
         compensation = payload()["compensation"] | {"conditional_on_outcome": True}
         report = MODULE.check(payload(compensation=compensation))
         self.assertIn("payment_conditional_on_outcome", report["readiness"]["blockers"])
+        self.assertIn("inspection_missing_for_quality_judgement", report["readiness"]["blockers"])
+
+    def test_a_written_inspection_clears_the_inspection_blocker_only(self):
+        compensation = payload()["compensation"] | {"conditional_on_outcome": True}
+        items = [item for item in payload()["items"] if item["code"] != "inspection"]
+        items.append({"code": "inspection", "status": "stated", "source": "email"})
+        report = MODULE.check(payload(compensation=compensation, items=items))
+        self.assertNotIn("inspection_missing_for_quality_judgement", codes(report))
+        self.assertIn("payment_conditional_on_outcome", codes(report))
+
+    def test_after_trial_unstated_is_a_note(self):
+        report = MODULE.check(payload())
+        self.assertIn("after_trial_unstated", codes(report))
+        self.assertEqual(report["readiness"]["status"], "ready_for_owner_review")
 
     def test_an_unchecked_pay_condition_is_a_note(self):
         compensation = payload()["compensation"] | {"conditional_on_outcome": None}
@@ -187,6 +201,16 @@ class RevisionsAndTerminationTest(unittest.TestCase):
     def test_zero_revisions_is_an_agreement_not_an_omission(self):
         report = MODULE.check(payload(revisions={"rounds": 0, "hours": 0}))
         self.assertNotIn("revision_scope_open_ended", codes(report))
+
+    def test_zero_revisions_without_hours_is_still_closed(self):
+        report = MODULE.check(payload(revisions={"rounds": 0, "unpaid": True}))
+        self.assertNotIn("revision_scope_open_ended", codes(report))
+        self.assertNotIn("unpaid_revisions", codes(report))
+
+    def test_unpaid_revisions_are_flagged_even_without_hours(self):
+        report = MODULE.check(payload(revisions={"rounds": 1, "unpaid": True}))
+        self.assertIn("unpaid_revisions", codes(report))
+        self.assertIn("revision_scope_open_ended", codes(report))
 
     def test_unpaid_revisions_are_flagged(self):
         report = MODULE.check(payload(revisions={"rounds": 1, "hours": 2, "unpaid": True}))

@@ -29,7 +29,7 @@
 
 ## 書き手が詰まりやすいところ
 
-- **現金と社内工数を混ぜない。** 「候補者に24,000円」だけを総額にすると、担当者8時間が消える。金額化できない場合も、時間のまま総額の横に置く。
+- **現金と社内工数を混ぜない。** 「候補者に24,000円」だけを総額にすると、担当者6時間が消える。金額化できない場合も、時間のまま総額の横に置く。
 - **社内工数の原価を創作しない。** 社内に時間あたりの原価の基準があればそれを使う。なければ金額化せず、時間で示す。一部の役割だけ金額化すると、社内工数が小さく見える。
 - **周辺費用は出所を付ける。** 掲載料をサービスの公式情報で確認したか、社内の見込みか、未確認かで、総額の確からしさが変わる。未確認の費用があるうちは、総額を確定額として書かない。
 - **他の採用手段との比較は、確認済みの金額だけで行う。** 人材紹介の手数料、求人媒体の掲載料は、見積書や公式の料金表示がなければ金額を並べない。名前だけ挙げて「確認中」と書く。相場を記憶で置かない。
@@ -73,15 +73,18 @@
 
 - `trial.kind` は `paid_work` / `learning_visit` / `unknown`。`paid_work` で `candidate_pay.basis` が `none` なら注意が出る。
 - `candidate_pay.basis` は `hourly` / `fixed` / `none`（無償の見学・学習）/ `unknown`。**単価がなければ相場で埋めず、省略する。** 幅があるときだけ `hours_max` を入れる。
-- `company_hours` は役割ごとの工数。`hourly_cost` は社内で使っている時間あたりの原価で、**すべての役割に入っているときだけ金額化する。** 入っていない役割があれば時間のまま返る。
-- `other_costs.source` は `official`（公式の料金表示）/ `quote`（見積書）/ `estimate`（社内の見込み）/ `unknown`。`amount` を省略すると未確認として扱い、現金の総額を確定させない。
-- `budget.includes_company_hours` は、予算が社内工数の金額化まで含むか。`false` なら現金の額と比べ、`true` なら金額化した総額と比べる。
+- `company_hours` は役割ごとの工数。`hourly_cost` は社内で使っている時間あたりの原価で、**社内に基準があるときだけ入れ、すべての役割に入っているときだけ金額化する。** 入っていない役割があれば時間のまま返る。例の 4000 は架空の基準であり、相場ではない。
+- `candidate_pay.expenses` は候補者の経費（交通費など）の扱い。負担しないなら `0` と書く。省略すると未確認として扱い、現金の総額を確定させない。
+- `other_costs.source` は `official`（公式の料金表示）/ `quote`（見積書）/ `estimate`（社内の見込み）/ `unknown`。`amount` を省略すると未確認として扱い、現金の総額を確定させない。例の掲載料 0 円は、企業向けサイトの料金表示を確認した場合の書き方であり、確認していなければ `source` を `unknown` にして `amount` を省く。
+- `budget.includes_company_hours` は、予算が社内工数の金額化まで含むか。`false` なら現金の額と比べ、`true` なら金額化した総額と比べる。既存の予算枠がなく、この資料で申請額を決める場合は `budget` を省略し、現金の額を申請額として示す。
 - `alternatives` は他の採用手段。`official` か `quote` で金額が入っているものだけ比較可能として返る。
 
-実行:
+実行は標準入力から渡すのを既定にする。社内の予算や原価をファイルに残さないためである。ファイルに書いた場合は `python3 scripts/summarize_trial_cost.py input.json` で読み、終わったら消す。
 
 ```bash
-python3 scripts/summarize_trial_cost.py input.json
+python3 scripts/summarize_trial_cost.py <<'JSON'
+{"trial": {"kind": "paid_work"}, "candidate_pay": {"basis": "hourly", "hourly_rate": 2000, "hours": 12, "expenses": 0}}
+JSON
 ```
 
 出力の `candidate_pay` は候補者への支払いの幅、`company_hours` は役割ごとの工数と金額化の可否、`other_costs` は出所別の周辺費用、`totals` は現金の額と社内工数込みの額と予算との差、`alternatives` は比較可能かどうか、`flags` は資料に書く前に確定させる点である。`totals.cash_is_complete` が `false` のとき、現金の総額を確定額として書かない。
