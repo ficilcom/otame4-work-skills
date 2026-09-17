@@ -21,6 +21,7 @@ CATEGORIES: tuple[str, ...] = (
     "research",
     "offer",
     "trial",
+    "employer",
     "sidework",
 )
 

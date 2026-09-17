@@ -30,8 +30,8 @@ from _common import (
 TASK_KINDS = ("learning", "mock", "company_work", "unknown")
 COMPANY_WORK = "company_work"
 
-# 報酬の決め方。`unknown` のまま予定費用を出さない。
-COMPENSATION_BASIS = ("hourly", "fixed", "unknown")
+# 報酬の決め方。`unknown` のまま予定費用を出さない。`none` は無償の見学・学習。
+COMPENSATION_BASIS = ("hourly", "fixed", "none", "unknown")
 
 # 条件がどの段階にあるか。企業の内部案を提示済み・合意済みとして扱わない。
 AGREEMENT_STATES = ("internal_draft", "offered", "candidate_request", "mutual", "unconfirmed")
@@ -198,6 +198,8 @@ def derive_cost(
         cost_high = rate * (paid_high if paid_high is not None else paid_low)
     elif basis == "fixed" and fixed is not None:
         cost_low = cost_high = fixed
+    elif basis == "none":
+        cost_low = cost_high = Decimal(0)
 
     paid_hourly_low, paid_hourly_high = per_hour_range(cost_low, cost_high, paid_low, paid_high)
     all_hourly_low, all_hourly_high = per_hour_range(cost_low, cost_high, all_low, all_high)
@@ -262,6 +264,10 @@ def collect_flags(
             "時間を確保できるかを別に見積もる",
         )
 
+    has_work = any(task["kind"] in (COMPANY_WORK, "mock") for task in tasks)
+    if cost["basis"] == "none" and any(task["kind"] == COMPANY_WORK for task in tasks):
+        add("company_work_in_unpaid_plan", "無償の計画に企業の実務が入っている。実務は有償業務として設計し直す")
+
     if cost["basis"] == "unknown":
         add("compensation_basis_unknown", "報酬の決め方が未定である。予定費用を出していない")
     elif cost["basis"] == "hourly" and cost["hourly_rate"] is None:
@@ -273,7 +279,8 @@ def collect_flags(
         add("expenses_or_tax_unclear", "経費・税の含み方が未定である。総費用が確定したように見せない")
 
     if budget is None:
-        add("budget_not_set", "予算が入っていない。範囲と費用の突き合わせができない")
+        if cost["basis"] != "none":
+            add("budget_not_set", "予算が入っていない。範囲と費用の突き合わせができない")
     elif budget["decidable"] is False:
         add(
             "budget_undecidable",
@@ -305,7 +312,8 @@ def collect_flags(
     if schedule["checkpoint"] is None:
         add("checkpoint_missing", "途中確認日を決めていない")
 
-    if revisions["rounds"] is None or revisions["hours"] is None:
+    # 成果物のない見学・学習だけの計画に修正の範囲は要らない。
+    if has_work and (revisions["rounds"] is None or revisions["hours"] is None):
         add(
             "revision_scope_open_ended",
             "修正の回数または時間の範囲が決まっていない。「納得するまで」を、確認できる品質と"
@@ -371,6 +379,9 @@ def plan(payload: object) -> dict[str, Any]:
         header.get("candidate_weekly_hours"), "plan.candidate_weekly_hours", allow_zero=False
     )
     weeks = Decimal(str(period["weeks"])) if period["weeks"] is not None else None
+    # 1週間に満たない期間は、その週に全実働が入る。週あたりの値を実働より小さく見せない。
+    if weeks is not None and 0 < weeks < 1:
+        weeks = Decimal(1)
     weekly_low = weekly_high = None
     if weeks is not None and weeks > 0:
         if low is not None:

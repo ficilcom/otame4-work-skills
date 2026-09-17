@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from _loader import load_script, run_script, script_path  # noqa: E402
 
 
-SCRIPT_PATH = "skills/trial/otameshi-employer/scripts/plan_trial_work.py"
+SCRIPT_PATH = "skills/employer/trial-work-design/scripts/plan_trial_work.py"
 SCRIPT = script_path(SCRIPT_PATH)
 MODULE = load_script(SCRIPT_PATH)
 
@@ -176,6 +176,34 @@ class BoundaryRuleTest(unittest.TestCase):
         tasks = payload()["tasks"]
         tasks[1] = task("改善案の作成", candidate_hours=6, paid=False)
         self.assertIn("company_work_unpaid", codes(MODULE.plan(payload(tasks=tasks))))
+
+    def test_an_unpaid_visit_costs_nothing_and_skips_budget_and_revision_notes(self):
+        report = MODULE.plan(
+            payload(
+                tasks=[task("見学", kind="learning", paid=False, candidate_hours=1, company_hours=1)],
+                compensation={"basis": "none"},
+                budget=None,
+                revisions={},
+            )
+        )
+        self.assertEqual(report["cost"]["planned_cost_max"], 0)
+        for code in ("compensation_basis_unknown", "budget_not_set", "revision_scope_open_ended"):
+            self.assertNotIn(code, codes(report))
+
+    def test_company_work_inside_an_unpaid_plan_is_flagged(self):
+        report = MODULE.plan(
+            payload(
+                tasks=[task("実注文の処理", paid=None, candidate_hours=1)],
+                compensation={"basis": "none"},
+                budget=None,
+            )
+        )
+        self.assertIn("company_work_in_unpaid_plan", codes(report))
+
+    def test_a_period_shorter_than_a_week_counts_as_one_week(self):
+        header = payload()["plan"] | {"period": {"start": "2026-10-03", "end": "2026-10-03", "checkpoint": "当日"}}
+        report = MODULE.plan(payload(plan=header))
+        self.assertEqual(report["schedule"]["required_weekly_hours_max"], 12.0)
 
     def test_accepts_an_unpaid_learning_visit(self):
         tasks = [task("見学", kind="learning", candidate_hours=2, paid=False, company_hours=2)]

@@ -1,6 +1,6 @@
 ---
 name: otameshi-candidate
-description: Help job seekers use Otameshi Tenshoku to prepare profiles and applications, clarify trial conditions, plan learning visits or paid trial work, and reflect on the experience. Use when a candidate wants to apply for, prepare for, negotiate the scope of, or review an otameshi work experience; do not use to predict whether they will be hired or to judge their aptitude, to state fees, contract terms, or service conditions from memory, or to submit an application, update a profile, or send a message on their behalf. Employer recruiting and hosting requests belong to otameshi-employer.
+description: Help job seekers use Otameshi Tenshoku to prepare profiles and applications, clarify trial conditions, plan learning visits or paid trial work, and reflect on the experience. Use when a candidate wants to apply for, prepare for, negotiate the scope of, or review an otameshi work experience; do not use to predict whether they will be hired or to judge their aptitude, to state fees, contract terms, or service conditions from memory, or to submit an application, update a profile, or send a message on their behalf. Employer-side requests belong to the employer skills (trial-work-design, trial-listing-draft, applicant-reply and others).
 license: MIT
 metadata:
   author: ficilcom
