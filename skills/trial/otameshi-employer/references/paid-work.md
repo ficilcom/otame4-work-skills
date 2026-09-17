@@ -77,7 +77,7 @@
 - 見積もりに幅があるときだけ `candidate_hours_max` を足す。予算との突き合わせは上限側で行う。
 - `basis` は `hourly` / `fixed` / `unknown`。単価が未定なら `hourly_rate` を省略する。**相場を創作しない。**
 - `budget.amount` は今回の予算。省略すると「未入力」として注意が出る。
-- `revisions` は修正の回数と時間の範囲。「納得するまで」のように上限がないものは省略し、具体化すべき項目として扱う。
+- `revisions` は修正の回数と時間の範囲。「納得するまで」のように上限がないものは省略し、具体化すべき項目として扱う。**修正なしで合意しているなら `{"rounds": 0, "hours": 0}` と書く。** 省略（未定）と0（合意済み）は別物である。
 - `agreement` は `internal_draft`（企業の内部案）/ `offered`（候補者に提示済み）/ `candidate_request` / `mutual` / `unconfirmed`。**`internal_draft` と `unconfirmed` を、提示済みや合意済みとして募集文・返信文に書かない。**
 
 実行:
@@ -87,3 +87,7 @@ python3 scripts/plan_trial_work.py input.json
 ```
 
 出力の `workload` は実働の内訳（有償・無償・未定を分けた時間と、企業担当者の工数）、`schedule` は期間に配置したときの週あたりの実働、`cost` は予定費用と時間換算、`budget` は予算との差、`flags` は候補者に提示する前に確認すべき点。期間だけを延ばしても `cost` は変わらない。
+
+時間換算は2通り出る。`effective_hourly_paid_*` は予定費用を**有償時間**で割ったもの、`effective_hourly_all_*` は**無償の作業も含めた候補者の全実働**で割ったものである。説明や会議を無償枠へ移すほど後者は下がるので、帳尻合わせが数字に表れる。
+
+見積もりの欠けた作業があるうちは、予算に収まるか（`budget.over`）と週あたりの実働が収まるか（`fits_candidate_availability`）を判定せず `null` にする。`budget.decidable` が `false` のとき、予算内と読まない。

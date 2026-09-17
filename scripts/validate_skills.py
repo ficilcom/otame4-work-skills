@@ -40,7 +40,11 @@ INTRO_CLOSER_PATTERN = re.compile(r"(?:行わない|出さない)。(?:\*\*)?\s*
 
 # 段階を束ねたスキルは、依頼と参照の対応表を `## 進め方` に持つ。その場合は
 # 段階ごとの references が各自の成果物仕様を持つため、report-format.md を求めない。
-ROUTING_TABLE_PATTERN = re.compile(r"^\|.*\|\s*$", re.M)
+# 表なら何でも免除にすると、普通のスキルが入力例の表を置くだけで出力形式の規則を
+# 外せてしまう。行が references/ へ振り分けていること、振り分け先が2つ以上あることを
+# 確かめ、段階を束ねた形になっているものだけを免除する。
+ROUTING_ROW_PATTERN = re.compile(r"^\|.*\]\((references/[^)]+\.md)\).*\|\s*$", re.M)
+ROUTING_TABLE_MIN_ROWS = 2
 BOUNDARY_PROMISE_PATTERN = re.compile(r"自動実行しない|本人が行う")
 
 # 実在する個人の応募書類をサンプルとして公開してしまう事故を止めるための最低限の検査。
@@ -150,6 +154,12 @@ def check_boundary_section(text: str) -> list[str]:
     return []
 
 
+def routes_to_stages(procedure: str) -> bool:
+    """`## 進め方` が、依頼を段階ごとの参照へ振り分ける表になっているか調べる。"""
+    destinations = set(ROUTING_ROW_PATTERN.findall(procedure))
+    return len(destinations) >= ROUTING_TABLE_MIN_ROWS
+
+
 def check_structure(path: Path, text: str) -> list[str]:
     """節の並びと、冒頭の非対象宣言、出力雛形とスクリプトの置き場所を確かめる。"""
     problems: list[str] = []
@@ -178,10 +188,10 @@ def check_structure(path: Path, text: str) -> list[str]:
 
     # 出力の雛形は references/report-format.md に置く。段階を束ねたスキルだけ免除する。
     report_format = path.parent / "references" / "report-format.md"
-    if not report_format.exists() and not ROUTING_TABLE_PATTERN.search(procedure):
+    if not report_format.exists() and not routes_to_stages(procedure):
         problems.append(
-            "references/report-format.md is required unless 進め方 routes requests "
-            "to per-stage references with a table"
+            f"references/report-format.md is required unless 進め方 routes requests to "
+            f"{ROUTING_TABLE_MIN_ROWS} or more per-stage references with a table"
         )
 
     # 同梱スクリプトは専用の節ではなく、それを使う工程として案内する。

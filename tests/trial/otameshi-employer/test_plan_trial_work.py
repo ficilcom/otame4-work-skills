@@ -106,8 +106,14 @@ class CostTest(unittest.TestCase):
             payload(compensation={"basis": "fixed", "fixed_amount": 36000, "expenses_included": True,
                                   "tax_treatment": "源泉徴収あり", "payment_date": "2026-11-30"})
         )
-        self.assertEqual(report["cost"]["effective_hourly_min"], 3000)
+        self.assertEqual(report["cost"]["effective_hourly_paid_min"], 3000)
         self.assertIn("時間単価の契約や適法性を意味しない", " ".join(report["notes"]))
+
+    def test_moving_work_to_the_unpaid_bucket_lowers_the_all_hours_rate(self):
+        tasks = [task("実務", candidate_hours=2), task("説明", candidate_hours=1, paid=False)]
+        cost = MODULE.plan(payload(tasks=tasks))["cost"]
+        self.assertEqual(cost["effective_hourly_paid_min"], 2000)
+        self.assertEqual(cost["effective_hourly_all_min"], 1333)
 
     def test_does_not_invent_a_rate(self):
         report = MODULE.plan(payload(compensation={"basis": "hourly"}))
@@ -133,6 +139,22 @@ class BudgetTest(unittest.TestCase):
         report = MODULE.plan(payload(tasks=tasks))
         self.assertEqual(report["cost"]["planned_cost_max"], 28000)
         self.assertEqual(report["budget"]["difference_at_max"], 2000)
+
+    def test_does_not_decide_the_budget_while_an_estimate_is_missing(self):
+        tasks = payload()["tasks"] + [task("未見積もりの作業", candidate_hours=None)]
+        report = MODULE.plan(payload(tasks=tasks, budget={"amount": 30000}))
+        budget = report["budget"]
+        self.assertIsNone(budget["over"])
+        self.assertIsNone(budget["difference_at_max"])
+        self.assertFalse(budget["decidable"])
+        self.assertIn("budget_undecidable", codes(report))
+        self.assertNotIn("over_budget", codes(report))
+
+    def test_does_not_decide_whether_the_work_fits_while_an_estimate_is_missing(self):
+        tasks = payload()["tasks"] + [task("未見積もりの作業", candidate_hours=None)]
+        report = MODULE.plan(payload(tasks=tasks))
+        self.assertIsNone(report["schedule"]["fits_candidate_availability"])
+        self.assertIn("weekly_fit_undecidable", codes(report))
 
     def test_says_so_when_no_budget_was_given(self):
         data = payload()
@@ -161,6 +183,11 @@ class BoundaryRuleTest(unittest.TestCase):
 
     def test_flags_an_open_ended_revision_scope(self):
         self.assertIn("revision_scope_open_ended", codes(MODULE.plan(payload(revisions={}))))
+
+    def test_accepts_an_agreed_scope_of_no_revisions(self):
+        report = MODULE.plan(payload(revisions={"rounds": 0, "hours": 0}))
+        self.assertEqual(report["revisions"], {"rounds": 0, "hours": 0.0})
+        self.assertNotIn("revision_scope_open_ended", codes(report))
 
     def test_flags_conditions_the_candidate_has_not_been_shown(self):
         report = MODULE.plan(

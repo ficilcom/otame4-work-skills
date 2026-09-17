@@ -103,9 +103,31 @@ class SkillStructureTest(unittest.TestCase):
             "2. [まとめ方](references/report-format.md) に従って出す。",
             "2. 依頼に応じて必要な参照だけを読む。\n\n"
             "| 依頼 | 参照と成果物 |\n| --- | --- |\n"
-            "| 架空の段階 | [架空の参照](references/stage.md)：成果物 |",
+            "| 架空の段階1 | [架空の参照1](references/first.md)：成果物 |\n"
+            "| 架空の段階2 | [架空の参照2](references/second.md)：成果物 |",
         )
         self.assertEqual(self.check(body, report_format=False), [])
+
+    def test_does_not_exempt_a_table_that_routes_nowhere(self):
+        body = BODY.replace(
+            "2. [まとめ方](references/report-format.md) に従って出す。",
+            "2. 入力の例を示す。\n\n| 項目 | 内容 |\n| --- | --- |\n"
+            "| 架空の項目1 | 架空の値 |\n| 架空の項目2 | 架空の値 |",
+        )
+        problems = self.check(body, report_format=False)
+        self.assertTrue(problems)
+        self.assertIn("report-format.md is required", problems[0])
+
+    def test_does_not_exempt_a_table_with_a_single_destination(self):
+        body = BODY.replace(
+            "2. [まとめ方](references/report-format.md) に従って出す。",
+            "2. 依頼に応じて必要な参照だけを読む。\n\n"
+            "| 依頼 | 参照と成果物 |\n| --- | --- |\n"
+            "| 架空の段階 | [架空の参照](references/only.md)：成果物 |",
+        )
+        problems = self.check(body, report_format=False)
+        self.assertTrue(problems)
+        self.assertIn("report-format.md is required", problems[0])
 
     def test_requires_a_shipped_script_to_be_introduced_from_the_procedure(self):
         problems = self.check(BODY, scripts=("_common.py", "check_sample.py"))

@@ -17,7 +17,7 @@ from _common import (
     optional_bool,
     optional_date,
     optional_number,
-    optional_positive_int,
+    optional_int,
     optional_text,
     require_list,
     require_object,
@@ -161,25 +161,50 @@ def parse_conditions(raw: object) -> list[dict[str, Any]]:
     return conditions
 
 
-def derive_money(compensation: dict[str, Any], low: Decimal | None, high: Decimal | None) -> dict[str, Any]:
-    """予定額と換算時給を出す。基準か実働が欠けていれば None のままにする。"""
+def per_hour_range(
+    cost_low: Decimal | None,
+    cost_high: Decimal | None,
+    hours_low: Decimal | None,
+    hours_high: Decimal | None,
+) -> tuple[Decimal | None, Decimal | None]:
+    """予定額を実働で割り、(下限, 上限) を返す。
+
+    見積もりの下限どうし・上限どうしを組にして割り、小さい方を下限にする。
+    固定額の時間換算は比較のための割り算であり、時間単価の契約を意味しない。
+    """
+    if cost_low is None or hours_low is None or hours_low <= 0:
+        return None, None
+    at_low = cost_low / hours_low
+    at_high = (cost_high or cost_low) / (hours_high if hours_high and hours_high > 0 else hours_low)
+    return (at_low, at_high) if at_low <= at_high else (at_high, at_low)
+
+
+def derive_money(
+    compensation: dict[str, Any],
+    paid_low: Decimal | None,
+    paid_high: Decimal | None,
+    all_low: Decimal | None,
+    all_high: Decimal | None,
+) -> dict[str, Any]:
+    """予定額と換算時給を出す。基準か実働が欠けていれば None のままにする。
+
+    予定額は有償と確認できた作業だけで出す。換算時給は2通り出す。有償時間で割った
+    ものと、**無償の作業も含めた全実働で割ったもの**である。無償の必須作業がある
+    ほど後者は下がる。最低賃金との比較には後者を使う。
+    """
     basis = compensation["basis"]
     rate = compensation["hourly_rate"]
     fixed = compensation["fixed_amount"]
 
     planned_low = planned_high = None
-    if basis == "hourly" and rate is not None and low is not None:
-        planned_low, planned_high = rate * low, rate * (high if high is not None else low)
+    if basis == "hourly" and rate is not None and paid_low is not None:
+        planned_low = rate * paid_low
+        planned_high = rate * (paid_high if paid_high is not None else paid_low)
     elif basis == "fixed" and fixed is not None:
         planned_low = planned_high = fixed
 
-    # 固定額の時間換算は比較のための割り算であり、時間単価の契約を意味しない。
-    effective_low = effective_high = None
-    if planned_low is not None and low is not None and low > 0:
-        effective_high = planned_low / low
-        effective_low = (planned_high or planned_low) / (high if high and high > 0 else low)
-        if effective_low > effective_high:
-            effective_low, effective_high = effective_high, effective_low
+    paid_hourly_low, paid_hourly_high = per_hour_range(planned_low, planned_high, paid_low, paid_high)
+    all_hourly_low, all_hourly_high = per_hour_range(planned_low, planned_high, all_low, all_high)
 
     return {
         "basis": basis,
@@ -187,8 +212,10 @@ def derive_money(compensation: dict[str, Any], low: Decimal | None, high: Decima
         "fixed_amount": round_yen(fixed),
         "planned_total_min": round_yen(planned_low),
         "planned_total_max": round_yen(planned_high),
-        "effective_hourly_min": round_yen(effective_low),
-        "effective_hourly_max": round_yen(effective_high),
+        "effective_hourly_paid_min": round_yen(paid_hourly_low),
+        "effective_hourly_paid_max": round_yen(paid_hourly_high),
+        "effective_hourly_all_min": round_yen(all_hourly_low),
+        "effective_hourly_all_max": round_yen(all_hourly_high),
         "expenses_included": compensation["expenses_included"],
         "tax_treatment": compensation["tax_treatment"],
         "payment_date": compensation["payment_date"],
@@ -257,6 +284,11 @@ def collect_flags(
         )
     elif schedule["weekly_available_hours"] is None:
         add("weekly_availability_unknown", "本人が提供できる週の時間が入っていない。無理のない配置か判定できない")
+    elif schedule["fits_weekly_availability"] is None:
+        add(
+            "weekly_fit_undecidable",
+            "見積もりの欠けた作業があるため、週あたりの実働が収まるかを判定していない",
+        )
 
     if revisions["rounds"] is None or revisions["hours"] is None:
         add(
@@ -342,7 +374,13 @@ def check(payload: object) -> dict[str, Any]:
             weekly_low = low / weeks
         if high is not None:
             weekly_high = high / weeks
-    fits = None if available is None or weekly_high is None else weekly_high <= available
+    # 見積もりの欠けた作業があるうちは、上限が確定しない。収まるとも超えるとも言わない。
+    estimated = not missing
+    fits = (
+        None
+        if available is None or weekly_high is None or not estimated
+        else weekly_high <= available
+    )
     schedule = {
         **period,
         "weekly_available_hours": as_hours(available),
@@ -352,7 +390,7 @@ def check(payload: object) -> dict[str, Any]:
     }
 
     compensation = parse_compensation(data.get("compensation"))
-    money = derive_money(compensation, paid_low, paid_high)
+    money = derive_money(compensation, paid_low, paid_high, low, high)
 
     minimum_wage = None
     raw_wage = data.get("minimum_wage")
@@ -361,7 +399,8 @@ def check(payload: object) -> dict[str, Any]:
         hourly = optional_number(block.get("hourly"), "minimum_wage.hourly", allow_zero=False)
         if hourly is None:
             raise ValueError("minimum_wage.hourly is required when minimum_wage is given")
-        lowest = money["effective_hourly_min"]
+        # 無償の必須作業があるほど下がる、全実働で割った時給と比べる。
+        lowest = money["effective_hourly_all_min"]
         minimum_wage = {
             "hourly": round_yen(hourly),
             "source": optional_text(block.get("source"), "minimum_wage.source"),
@@ -370,9 +409,10 @@ def check(payload: object) -> dict[str, Any]:
         }
 
     raw_revisions = require_object(data.get("revisions", {}), "revisions")
+    # 0 は「修正なしで合意した」であり、省略（未確認）とは別物なので受け取る。
     revisions = {
-        "rounds": optional_positive_int(raw_revisions.get("rounds"), "revisions.rounds"),
-        "hours": optional_number(raw_revisions.get("hours"), "revisions.hours", allow_zero=False),
+        "rounds": optional_int(raw_revisions.get("rounds"), "revisions.rounds"),
+        "hours": optional_number(raw_revisions.get("hours"), "revisions.hours"),
     }
 
     conditions = parse_conditions(data.get("conditions"))

@@ -134,12 +134,36 @@ class CompensationTest(unittest.TestCase):
                                   "tax_treatment": "源泉徴収あり", "payment_date": "2026-11-30", "payer": "架空商事"})
         )
         self.assertEqual(report["compensation"]["planned_total_min"], 24000)
-        self.assertEqual(report["compensation"]["effective_hourly_min"], 2000)
+        self.assertEqual(report["compensation"]["effective_hourly_paid_min"], 2000)
+
+    def test_divides_by_all_hours_when_required_work_is_unpaid(self):
+        tasks = [
+            task("実務", candidate_hours=2),
+            task("必須の説明", candidate_hours=1, paid=False),
+        ]
+        report = MODULE.check(payload(tasks=tasks))
+        money = report["compensation"]
+        self.assertEqual(money["planned_total_min"], 4000)
+        self.assertEqual(money["effective_hourly_paid_min"], 2000)
+        # 無償の1時間も本人の実働なので、全実働で割った時給は下がる。
+        self.assertEqual(money["effective_hourly_all_min"], 1333)
+
+    def test_compares_the_minimum_wage_against_the_all_hours_rate(self):
+        tasks = [
+            task("実務", candidate_hours=2),
+            task("必須の説明", candidate_hours=1, paid=False),
+        ]
+        report = MODULE.check(
+            payload(tasks=tasks, minimum_wage={"hourly": 1500, "source": "架空の告示", "as_of": "2026-10-01"})
+        )
+        self.assertTrue(report["minimum_wage"]["below"])
+        self.assertIn("below_supplied_minimum_wage", codes(report))
 
     def test_does_not_invent_a_rate_when_none_is_offered(self):
         report = MODULE.check(payload(compensation={"basis": "hourly"}))
         self.assertIsNone(report["compensation"]["planned_total_min"])
-        self.assertIsNone(report["compensation"]["effective_hourly_min"])
+        self.assertIsNone(report["compensation"]["effective_hourly_paid_min"])
+        self.assertIsNone(report["compensation"]["effective_hourly_all_min"])
         self.assertIn("hourly_rate_missing", codes(report))
 
     def test_does_not_price_a_trial_whose_basis_is_unknown(self):
@@ -192,6 +216,18 @@ class UnconfirmedTest(unittest.TestCase):
     def test_flags_an_open_ended_revision_scope(self):
         report = MODULE.check(payload(revisions={}))
         self.assertIn("revision_scope_open_ended", codes(report))
+
+    def test_accepts_an_agreed_scope_of_no_revisions(self):
+        report = MODULE.check(payload(revisions={"rounds": 0, "hours": 0}))
+        self.assertEqual(report["revisions"], {"rounds": 0, "hours": 0.0})
+        self.assertNotIn("revision_scope_open_ended", codes(report))
+
+    def test_does_not_decide_whether_the_work_fits_while_an_estimate_is_missing(self):
+        tasks = payload()["tasks"] + [task("未見積もりの作業", candidate_hours=None)]
+        report = MODULE.check(payload(tasks=tasks))
+        self.assertIsNone(report["schedule"]["fits_weekly_availability"])
+        self.assertIn("weekly_fit_undecidable", codes(report))
+        self.assertNotIn("weekly_hours_exceed_availability", codes(report))
 
 
 class InputTest(unittest.TestCase):
