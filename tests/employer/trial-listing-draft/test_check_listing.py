@@ -91,6 +91,13 @@ class ChecklistTest(unittest.TestCase):
         items.append({"code": "after_trial", "status": "missing"})
         report = MODULE.check(payload(items=items))
         self.assertEqual(report["readiness"]["status"], "ready_for_owner_review")
+        self.assertIn("after_trial_unstated", codes(report))
+
+    def test_a_stated_after_trial_clears_the_note(self):
+        items = [{"code": code, "status": "stated"} for code in REQUIRED_FOR_PAID]
+        items.append({"code": "after_trial", "status": "stated"})
+        report = MODULE.check(payload(items=items))
+        self.assertNotIn("after_trial_unstated", codes(report))
 
 
 class TextTest(unittest.TestCase):
@@ -123,6 +130,26 @@ class TextTest(unittest.TestCase):
         listing = {"kind": "paid_work", "text": "体験後は必ず採用します。"}
         report = MODULE.check(payload(listing=listing))
         self.assertIn("hiring_guarantee", findings(report))
+
+    def test_a_soft_hiring_hint_is_also_caught(self):
+        listing = {"kind": "paid_work", "text": "体験後は採用も！継続確約。"}
+        report = MODULE.check(payload(listing=listing))
+        self.assertEqual(findings(report)["hiring_guarantee"]["matched"], ["体験後は採用", "継続確約"])
+
+    def test_an_unpaid_trial_inside_a_paid_listing_blocks(self):
+        listing = {"kind": "paid_work", "text": "無償体験からスタートします。"}
+        report = MODULE.check(payload(listing=listing))
+        self.assertIn("unpaid_as_prerequisite", findings(report))
+
+    def test_an_unpaid_learning_visit_may_say_so(self):
+        listing = {"kind": "learning_visit", "text": "無償体験です。見学60分。"}
+        report = MODULE.check(payload(listing=listing, items=[]))
+        self.assertNotIn("unpaid_as_prerequisite", findings(report))
+
+    def test_age_bands_and_household_roles_are_caught(self):
+        listing = {"kind": "paid_work", "text": "30代までの方、主婦歓迎。"}
+        report = MODULE.check(payload(listing=listing))
+        self.assertEqual(findings(report)["personal_attribute"]["matched"], ["30代まで", "主婦"])
 
     def test_personal_attributes_block(self):
         listing = {"kind": "paid_work", "text": "35歳以下の女性歓迎。"}

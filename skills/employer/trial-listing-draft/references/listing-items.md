@@ -86,18 +86,22 @@
 
 - `listing.kind` は `paid_work`（有償業務）/ `learning_visit`（無償の見学・学習）/ `unknown`。未定なら、どちらかで必須の項目をすべて必須として見る。
 - `listing.audience` は `experienced` / `inexperienced` / `any` / `unknown`。`inexperienced` で `paid_work` なら、有償枠のままにして支援を本文に書くよう注意が出る。
-- `listing.stage` は `internal_draft` / `ready_to_post` / `published` / `unknown`。段階を変えても判定は変わらない。
+- `listing.stage` は `internal_draft` / `ready_to_post` / `published` / `unknown`。判定には使わず、報告で下書きを新規案にするか掲載済みの修正案にするかを分けるための情報である。
 - `listing.text` は本文の原文。**前後の空白を含めてそのまま渡す。** 本文全体は出力に載らず、一致した表現だけが短く返る。
 - `items` は確認した項目だけを入れる。入れなかった項目は「未確認」として数えられる。`status` は `stated` / `missing`（書かれていないことを確認した）/ `unclear`（書いてはあるが読み取れない）/ `unknown`（未確認）。**未確認を `missing` に丸めない。**
-- `plan` は `trial-work-design` で決めた数字。入れると、実働が週の稼働×期間に収まるか、予定費用が予算に収まるかを確かめる。`compensation.basis` は `hourly` / `fixed` / `none`（無償）/ `unknown`。**単価がなければ相場で埋めない。**
+- `plan` は `trial-work-design` で決めた数字か、計画がなければ利用者の発言から仮置きした数字。入れると、実働が週の稼働×期間に収まるか、予定費用が予算に収まるかを確かめる。`compensation.basis` は `hourly` / `fixed` / `none`（無償）/ `unknown`。**単価がなければ相場で埋めない。** 仮置きの単価や予算は、確定条件として本文に書かないよう `conditions` にも `internal_draft` として入れる。
 - `conditions` は本文に書こうとしている条件のうち、社内案（`internal_draft`）や未確認（`unconfirmed`）のもの。確定条件として書かないよう注意が出る。`agreement` の値は `trial-work-design` と同じ。
 
-実行:
+実行は標準入力から渡すのを既定にする。本文をファイルに残さないためである。
 
 ```bash
-python3 scripts/check_listing.py input.json
+python3 scripts/check_listing.py <<'JSON'
+{"listing": {"kind": "paid_work", "text": "..."}, "items": []}
+JSON
 ```
 
-ファイルに残したくない場合は標準入力から渡す。
+ファイルに書いた場合は `python3 scripts/check_listing.py input.json` で読み、終わったら消す。
+
+本文の表現の検査は代表的な言い回しだけを拾う。**一致しなかったからといって表現に問題がないとは限らない。** [書き手が詰まりやすいところ](#書き手が詰まりやすいところ) の一覧を正とし、スクリプトは見落としを減らす補助として使う。
 
 出力の `checklist` は項目ごとの記載状況、`text_findings` は本文の表現（`block` は掲載前に直す、`check` は確認して残すか決める）、`numbers` は計画の数字の整合、`readiness` は点検としてどこまで進められるか、`flags` は掲載前に解消する点である。`readiness.status` が `ready_for_owner_review` でも、掲載の操作と最終判断は利用者が行う。

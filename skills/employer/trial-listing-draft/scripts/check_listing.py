@@ -27,7 +27,7 @@ from _common import (
 
 LISTING_KINDS = ("paid_work", "learning_visit", "unknown")
 AUDIENCES = ("experienced", "inexperienced", "any", "unknown")
-# 原稿がどの段階か。`internal_draft` は社内検討用で、候補者に見せる前提ではない。
+# 原稿がどの段階か。判定には使わず、報告で下書きを新規案にするか修正案にするかを分けるための情報。
 STAGES = ("internal_draft", "ready_to_post", "published", "unknown")
 ITEM_STATUSES = ("stated", "missing", "unclear", "unknown")
 COMPENSATION_BASIS = ("hourly", "fixed", "none", "unknown")
@@ -83,14 +83,14 @@ TEXT_CHECKS: tuple[tuple[str, str, str, str, tuple[str, ...]], ...] = (
     ),
     (
         "hiring_guarantee",
-        r"採用(?:を)?確約|必ず採用|内定(?:を)?保証|採用保証|全員採用",
+        r"採用(?:を)?確約|必ず採用|内定(?:を)?保証|採用保証|全員採用|体験後(?:は|に)(?:必ず)?採用|継続(?:を)?(?:確約|保証)",
         "採用や継続を保証する表現がある。体験後の判断は双方に残す",
         "block",
         (),
     ),
     (
         "personal_attribute",
-        r"男性(?:限定|のみ|歓迎)|女性(?:限定|のみ|歓迎)|\d{2}歳(?:以下|以上|まで|未満)|若い方|既婚|未婚|国籍",
+        r"男性(?:限定|のみ|歓迎)|女性(?:限定|のみ|歓迎)|\d{2}歳(?:以下|以上|まで|未満)|\d0代(?:まで|以下|限定|歓迎|の方)|若い方|主婦|主夫|既婚|未婚|国籍",
         "職務と無関係な属性で応募者を絞る表現がある。募集の表現に関する公的資料を確認し、職務要件に置き換える",
         "block",
         (),
@@ -111,8 +111,8 @@ TEXT_CHECKS: tuple[tuple[str, str, str, str, tuple[str, ...]], ...] = (
     ),
     (
         "unpaid_as_prerequisite",
-        r"無償(?:体験|参加)(?:後|を経て)|まずは無償|最初は無料",
-        "無償体験を有償業務の前提にしている。無償体験を応募の必須条件にしない",
+        r"無償(?:体験|参加|で体験)|無料(?:体験|で体験)|まずは無償|最初は無料",
+        "有償業務の募集に無償の体験が入っている。企業の実務は有償で書き、無償体験を応募の前提にしない",
         "block",
         ("paid_work",),
     ),
@@ -316,6 +316,14 @@ def collect_flags(
     blocking = [finding["code"] for finding in findings if finding["severity"] == "block"]
     if blocking:
         add("text_needs_rewrite", "掲載前に直す表現がある", blocking)
+
+    if listing["kind"] == "paid_work":
+        after_trial = next(item for item in checklist if item["code"] == "after_trial")
+        if after_trial["status"] != "stated":
+            add(
+                "after_trial_unstated",
+                "体験後の扱い（採用や継続を保証しないこと）が書かれていないか未確認である。応募後に必ず聞かれるので本文に書く",
+            )
 
     if listing["audience"] == "inexperienced" and listing["kind"] == "paid_work":
         add(
