@@ -278,8 +278,9 @@ def collect_flags(
     if cost["expenses_included"] is None or cost["tax_treatment"] is None:
         add("expenses_or_tax_unclear", "経費・税の含み方が未定である。総費用が確定したように見せない")
 
-    if budget is None and cost["basis"] != "none":
-        add("budget_not_set", "予算が入っていない。範囲と費用の突き合わせができない")
+    if budget is None:
+        if cost["basis"] != "none":
+            add("budget_not_set", "予算が入っていない。範囲と費用の突き合わせができない")
     elif budget["decidable"] is False:
         add(
             "budget_undecidable",
