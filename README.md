@@ -1,18 +1,19 @@
 # Otame4 Work Skills — 就活・転職・採用のAIスキル
 
-日本の就職活動と転職のための [Agent Skills](https://agentskills.io/) 集。自己分析、エントリーシート・履歴書・職務経歴書の添削、面接対策、企業研究、内定の判断、おためし転職の体験・業務設計までを扱う。
+日本の就職活動と転職のための [Agent Skills](https://agentskills.io/) 集。自己分析、エントリーシート・履歴書・職務経歴書の添削、面接対策、企業研究、内定の判断、おためし転職の体験・業務設計、副業の可否と案件条件の確認までを扱う。
 
 各スキルは単独でインストールでき、オープンな Agent Skills 仕様に従う。求職者本人が自分の Claude に入れて使うことを前提にしている。`trial` カテゴリでは求人企業の採用担当者にも対応し、それぞれの立場で使うスキルを選べる。
 
-> **English** — A collection of Agent Skills for the Japanese job market: entry sheets (ES), rirekisho and shokumu-keirekisho review, interview preparation, company research, offer decisions, and Otameshi Tenshoku trial planning for candidates and employers. Skill bodies, references, and report templates are written in Japanese; only the `SKILL.md` frontmatter is English so agents can discover them.
+> **English** — A collection of Agent Skills for the Japanese job market: entry sheets (ES), rirekisho and shokumu-keirekisho review, interview preparation, company research, offer decisions, Otameshi Tenshoku trial planning for candidates and employers, and side-work checks covering an employer's own rules and the terms of a gyomu-itaku assignment. Skill bodies, references, and report templates are written in Japanese; only the `SKILL.md` frontmatter is English so agents can discover them.
 
-**Claude Codeで、応募書類・面接・求人票・おためし転職の相談を具体的な原稿や計画に。** 求人や経験のメモから必要なところに着手でき、特別な入力形式は不要です。
+**Claude Codeで、応募書類・面接・求人票・おためし転職・副業の相談を具体的な原稿や計画に。** 求人や経験のメモから必要なところに着手でき、特別な入力形式は不要です。
 
 | やりたいこと | 最初に使うSkill | 得られるもの |
 | --- | --- | --- |
 | ES・履歴書・職務経歴書を添削したい | [`entry-sheet-review`](skills/documents/entry-sheet-review/SKILL.md) | 事実と設問に沿った改稿案 |
 | おためし転職に応募・参加したい | [`otameshi-candidate`](skills/trial/otameshi-candidate/SKILL.md) | 応募文、確認質問、体験計画 |
 | 企業として募集・受け入れたい | [`otameshi-employer`](skills/trial/otameshi-employer/SKILL.md) | 募集文、仕事量・期間・報酬の計画 |
+| 副業を始めてよいか確認したい | [`sidework-rules-check`](skills/sidework/sidework-rules-check/SKILL.md) | 規定の確認表、会社への質問、申請材料 |
 
 [インストールする](#install) · [全スキルを見る](#収録スキル) · [skills.shで探す](https://skills.sh/ficilcom/otame4-work-skills)
 
@@ -40,6 +41,12 @@ npx skills add ficilcom/otame4-work-skills --skill otameshi-employer -a claude-c
 npx skills add ficilcom/otame4-work-skills --skill entry-sheet-review -a claude-code -g
 ```
 
+**副業：就業規則の確認から案件の条件確認まで**
+
+```bash
+npx skills add ficilcom/otame4-work-skills --skill sidework-rules-check -a claude-code -g
+```
+
 インストール後、Claude Codeで新しい会話を始め、「おためし転職の応募文を作って」「予算内に収まる体験業務を設計して」「このESを添削して」のように依頼します。名前で指定する場合は「otameshi-candidateを使って」のように伝えます。
 
 すべてのスキルを一覧してから選ぶ:
@@ -61,7 +68,7 @@ claude plugin marketplace add ficilcom/otame4-work-skills
 claude plugin install otame4-trial@otame4-work-skills
 ```
 
-カタログ追加だけではスキルはインストールされません。ほかのカテゴリは `otame4-career`、`otame4-documents`、`otame4-research`、`otame4-interview`、`otame4-offer` を選べます。
+カタログ追加だけではスキルはインストールされません。ほかのカテゴリは `otame4-career`、`otame4-documents`、`otame4-research`、`otame4-interview`、`otame4-offer`、`otame4-sidework` を選べます。
 
 手で入れる場合は、スキルのディレクトリを `~/.claude/skills/<skill-name>/` にコピーする。
 
@@ -73,6 +80,7 @@ claude plugin install otame4-trial@otame4-work-skills
 - 業界・企業研究、求人票の読み解き
 - 内定・オファーの比較、条件確認、退職と入社の準備
 - おためし転職の応募・募集、見学・学習の無償体験、有償業務の仕事量・期間・報酬設計と振り返り
+- 副業の可否と申請・届出の確認、業務委託で受ける案件の取引条件と報酬の確認
 
 一般論のキャリア論ではなく、具体的な判断と、そのまま使える成果物を出すことを優先する。
 
@@ -96,6 +104,8 @@ claude plugin install otame4-trial@otame4-work-skills
 | Offer | [`resignation-plan`](skills/offer/resignation-plan/) | 退職の申出日・退職日・入社日を就業規則の定めと突き合わせ、有給の消化、引き継ぎ、書類の受け渡し、空白期間に発生する手続きを整理する。退職の可否は判断しない。 |
 | Trial | [`otameshi-candidate`](skills/trial/otameshi-candidate/) | 求職者向け。応募文、体験前の確認質問、学習体験・有償業務の計画、体験後の判断材料を作る。有償業務では実働・期間・予定額・換算時給を揃え、未経験でも企業の実務は有償枠を提案する。 |
 | Trial | [`otameshi-employer`](skills/trial/otameshi-employer/) | 企業向け。募集文・応募者への返信、学習体験の受け入れ、有償業務の範囲・品質・仕事量・期間・報酬・変更条件、フィードバック案を作る。候補者の実働と企業の工数を分けて数え、予定費用を予算と突き合わせる。 |
+| Sidework | [`sidework-rules-check`](skills/sidework/sidework-rules-check/) | 就業規則・雇用契約・誓約書のどこに何が書かれているかを根拠付きで確認し、禁止・許可制・届出制を区別する。競業、秘密保持、職務専念、設備の利用のうち触れうるものを出し、本業と合わせた週の稼働を合算する。可否の結論も規定の適法性も判定しない。 |
+| Sidework | [`sidework-terms-check`](skills/sidework/sidework-terms-check/) | 業務委託で受ける案件の取引条件が書面で明示されているかを項目ごとに確認する。打合せ・修正・無償の作業を含めた総稼働で報酬を割った換算時給と、納品から支払期日までの日数を出す。相場の評価も受諾の判断もしない。 |
 
 ## おためし転職の使い方
 
@@ -110,7 +120,7 @@ claude plugin install otame4-trial@otame4-work-skills
 
 ## Web 検索・ページ取得について
 
-`company-research` は公開情報を取りに行く。`career-options` も、候補の仕事内容や要件を具体的に確かめるときに公開情報を参照する。`trial` の2つは、判断に必要な料金・契約・支払い・キャンセル・無償掲載可否などを公式情報で確認する。説明に差がある場合は推測で統一せず、確認事項にする。スキル自体はツールを増やさないため、**利用者の環境で Web 検索やページ取得が使えるかどうか**で挙動が変わる。
+`company-research` は公開情報を取りに行く。`career-options` も、候補の仕事内容や要件を具体的に確かめるときに公開情報を参照する。`trial` の2つは、判断に必要な料金・契約・支払い・キャンセル・無償掲載可否などを公式情報で確認する。`sidework` の2つは、労働時間の通算、社会保険、税、取引条件の明示など時点で変わる制度を、厚生労働省・日本年金機構・国税庁・公正取引委員会などの公表資料で確認する。説明に差がある場合は推測で統一せず、確認事項にする。スキル自体はツールを増やさないため、**利用者の環境で Web 検索やページ取得が使えるかどうか**で挙動が変わる。
 
 | 環境 | Web 取得 |
 | --- | --- |
@@ -150,7 +160,8 @@ otame4-work-skills/
 │   ├── interview/
 │   ├── research/
 │   ├── offer/
-│   └── trial/
+│   ├── trial/
+│   └── sidework/
 ├── scripts/
 │   ├── _common_source.py     # 同梱 _common.py の唯一の編集点
 │   ├── sync_common.py        # 各スキルへ配る／--check で同期を検証
@@ -177,6 +188,7 @@ otame4-work-skills/
 | `research` | 業界・企業研究、求人票の読み解き、応募先の選定 |
 | `offer` | 内定・オファー比較、条件確認、退職と入社準備 |
 | `trial` | 求職者・求人企業のおためし転職、応募・募集、学習体験・有償業務設計、振り返り |
+| `sidework` | 本業と並行する副業の可否・申請、業務委託案件の取引条件と報酬の確認 |
 
 ## 開発
 
