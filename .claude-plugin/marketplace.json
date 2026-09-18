@@ -47,14 +47,15 @@
     },
     {
       "name": "otame4-career",
-      "description": "Career conversations from uncertainty to next steps: weighing a job change, exploring roles through evidence and small experiments, taking stock of experience, and building checkable employer criteria. (4 skills)",
+      "description": "Career conversations from uncertainty to next steps: weighing a job change, exploring roles through evidence and small experiments, taking stock of experience, building checkable employer criteria, and laying out how a search runs alongside a current job. (5 skills)",
       "version": "0.1.0",
       "source": "./skills/career",
       "skills": [
         "./career-inventory",
         "./career-options",
         "./job-change-decision",
-        "./job-hunting-axis"
+        "./job-hunting-axis",
+        "./job-search-plan"
       ],
       "category": "productivity",
       "tags": [
