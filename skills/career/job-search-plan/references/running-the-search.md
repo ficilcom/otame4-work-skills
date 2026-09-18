@@ -93,4 +93,4 @@ python3 scripts/plan_job_search.py
 
 保存を依頼されて作成した入力ファイルがある場合だけ、そのパスを引数に指定できる。
 
-出力の `time` は時間の合計と余裕、`channels` は経路ごとの確認状況、`applications` は各応募の期限までの日数、`due` は次の行動と相手の期限を日付順に並べたもの、`flags` は確認の候補。`weekly_hours_exceeded` は活動を減らせという指示ではなく、どちらを変えるかは本人が決める。**どの企業に応募すべきか、何社に応募すべきかは出力に含まれない。**
+出力の `time` は時間の合計と余裕、`channels` は経路ごとの確認状況、`applications` は各応募の期限までの日数、`due` は次の行動と相手の期限を日付順に並べたもの（予定日のない行動は載らず、`next_action_undated` として出る）、`flags` は確認の候補。省略した欄は未確認として扱われ、公開設定の未確認（`profile_visibility_unknown`）や辞退の連絡の未記録（`withdrawal_notification_unknown`）は、確認済みと読み替えずに注意として出る。`weekly_hours_exceeded` は活動を減らせという指示ではなく、どちらを変えるかは本人が決める。**どの企業に応募すべきか、何社に応募すべきかは出力に含まれない。**

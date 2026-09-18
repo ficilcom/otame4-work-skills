@@ -51,6 +51,8 @@ CHANNEL_KINDS = (
 )
 # 第三者が間に入る経路。同一企業への他経路の応募や辞退の連絡先に取り決めがありうる。
 INTERMEDIATED_KINDS = ("agent", "referral")
+# 経歴やプロフィールが閲覧される設定を持ちうる経路。公開かどうか未確認なら確認を促す。
+PROFILE_CAPABLE_KINDS = ("job_board", "scout_site")
 # 公開プロフィールが現職に見えないよう設定できているか。
 BLOCK_STATES = ("yes", "no", "unknown", "not_applicable")
 
@@ -217,6 +219,20 @@ def collect_flags(
             "経歴が公開される経路で、現職から見えない設定が未確認または未設定。公開範囲は本人が設定する",
             public_unblocked,
         )
+    # 公開かどうか自体が未確認の経路。未確認を非公開と読み替えない。
+    visibility_unknown = [
+        channel["label"]
+        for channel in channels.values()
+        if channel["profile_public"] is None
+        and channel["kind"] in PROFILE_CAPABLE_KINDS
+        and channel["current_employer_blocked"] != "yes"
+    ]
+    if visibility_unknown:
+        add(
+            "profile_visibility_unknown",
+            "経歴が閲覧されうる経路で、公開設定が未確認。公開されているか、現職から見えない設定かを本人が確認する",
+            visibility_unknown,
+        )
     terms_unconfirmed = [
         channel["label"]
         for channel in channels.values()
@@ -255,6 +271,20 @@ def collect_flags(
     ]
     if without_next:
         add("application_without_next_action", "進行中だが次の行動が決まっていない応募がある", without_next)
+    # 行動はあるが予定日がない応募は、日付順の一覧（due）に載らない。
+    undated_next = [
+        item["id"]
+        for item in applications
+        if item["stage"] in ACTIVE_STAGES
+        and item["next_action"] is not None
+        and item["next_action_by"] is None
+    ]
+    if undated_next:
+        add(
+            "next_action_undated",
+            "次の行動はあるが予定日が決まっていない応募がある。日付順の一覧に載らない",
+            undated_next,
+        )
     overdue = [
         item["id"]
         for item in applications
@@ -288,6 +318,18 @@ def collect_flags(
     ]
     if unnotified:
         add("withdrawal_not_notified", "辞退・取り下げを決めたが相手に伝えていない応募がある。連絡は本人が行う", unnotified)
+    # 伝えたかどうか未記録の辞退。未記録を連絡済みと読み替えない。
+    notification_unknown = [
+        item["id"]
+        for item in applications
+        if item["stage"] == "withdrawn" and item["notified"] is None
+    ]
+    if notification_unknown:
+        add(
+            "withdrawal_notification_unknown",
+            "辞退・取り下げを相手に伝えたかが記録されていない応募がある。伝えていなければ連絡は本人が行う",
+            notification_unknown,
+        )
 
     if review_date is None:
         add("review_date_not_set", "活動を見直す日が決まっていない。続けるか、減らすか、止めるかを考える区切りがない")

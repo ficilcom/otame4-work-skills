@@ -107,6 +107,30 @@ class ChannelTest(unittest.TestCase):
         )
         self.assertEqual(flag(report, "profile_public_without_block")["items"], ["B"])
 
+    def test_unknown_visibility_on_a_profile_channel_is_flagged(self):
+        report = MODULE.plan_job_search(
+            payload(channels=[{"id": "scout_b", "kind": "scout_site", "label": "B"}], applications=[])
+        )
+        self.assertEqual(flag(report, "profile_visibility_unknown")["items"], ["B"])
+        self.assertNotIn("profile_public_without_block", codes(report))
+
+    def test_unknown_visibility_is_not_flagged_when_employer_is_blocked(self):
+        report = MODULE.plan_job_search(
+            payload(
+                channels=[
+                    {"id": "b", "kind": "job_board", "label": "B", "current_employer_blocked": "yes"}
+                ],
+                applications=[],
+            )
+        )
+        self.assertNotIn("profile_visibility_unknown", codes(report))
+
+    def test_unknown_visibility_on_a_direct_channel_is_not_flagged(self):
+        report = MODULE.plan_job_search(
+            payload(channels=[{"id": "d", "kind": "direct"}], applications=[application(channel="d")])
+        )
+        self.assertNotIn("profile_visibility_unknown", codes(report))
+
     def test_blocked_public_profile_is_not_flagged(self):
         report = MODULE.plan_job_search(payload())
         self.assertNotIn("profile_public_without_block", codes(report))
@@ -173,6 +197,12 @@ class ApplicationTest(unittest.TestCase):
         )
         self.assertEqual(flag(report, "application_without_next_action")["items"], ["a1"])
 
+    def test_next_action_without_a_date_is_flagged_and_missing_from_due(self):
+        report = MODULE.plan_job_search(payload(applications=[application(next_action_by=None)]))
+        self.assertEqual(flag(report, "next_action_undated")["items"], ["a1"])
+        self.assertNotIn("application_without_next_action", codes(report))
+        self.assertEqual(report["due"], [])
+
     def test_closed_application_without_next_action_is_not_flagged(self):
         report = MODULE.plan_job_search(
             payload(applications=[application(stage="not_selected", next_action=None, next_action_by=None)])
@@ -204,6 +234,12 @@ class ApplicationTest(unittest.TestCase):
         report = MODULE.plan_job_search(
             payload(applications=[application(stage="withdrawn", notified=True)])
         )
+        self.assertNotIn("withdrawal_not_notified", codes(report))
+        self.assertNotIn("withdrawal_notification_unknown", codes(report))
+
+    def test_withdrawal_with_unknown_notification_is_flagged_separately(self):
+        report = MODULE.plan_job_search(payload(applications=[application(stage="withdrawn")]))
+        self.assertEqual(flag(report, "withdrawal_notification_unknown")["items"], ["a1"])
         self.assertNotIn("withdrawal_not_notified", codes(report))
 
 
