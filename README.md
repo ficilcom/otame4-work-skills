@@ -81,7 +81,7 @@ claude plugin install otame4-employer@otame4-work-skills
 
 ## 対象範囲
 
-- 自己分析と就活・転職の軸づくり、転職するかどうかの相談、次の仕事・職種の探索
+- 自己分析と就活・転職の軸づくり、転職するかどうかの相談、次の仕事・職種の探索、在職中の転職活動の段取り
 - エントリーシート、履歴書、職務経歴書の作成と添削
 - 面接・面談の準備と振り返り
 - 業界・企業研究、求人票の読み解き
@@ -98,8 +98,9 @@ claude plugin install otame4-employer@otame4-work-skills
 | --- | --- | --- |
 | Career | [`job-hunting-axis`](skills/career/job-hunting-axis/) | 「成長できる環境」のような言葉を、何を見れば確認できるかが決まった基準に変える。想像に基づく軸と経験に基づく軸を分け、両立しにくい必須の組み合わせを出す。順位は付けない。 |
 | Career | [`career-inventory`](skills/career/career-inventory/) | 書類を書く前に経験を事実として洗い出す。状況・自分の行動・結果・役割に分け、各主張が何に基づくか（公開情報・手元の資料・当時を知る人・記憶だけ）を記録する。強みや適性は判定しない。 |
-| Career | [`job-change-decision`](skills/career/job-change-decision/) | 「辞めたい」「このままでいいのか」という迷いから対話し、変えたいこと・守りたいことを整理する。条件付きの見立てと小さな次の行動、見直す時期まで考え、最終判断は本人に残す。 |
+| Career | [`job-change-decision`](skills/career/job-change-decision/) | 「辞めたい」「このままでいいのか」という迷い、内定や引き留めを受けた後の迷い、周囲の反対から対話し、変えたいこと・守りたいことを整理する。期限は結論を迫る理由ではなく行動の順序を決める材料として扱い、条件付きの見立てと小さな次の行動、見直す時期まで考え、最終判断は本人に残す。 |
 | Career | [`career-options`](skills/career/career-options/) | 本人が実際にした作業から次の仕事の候補を作り、経験との接点・未確認の業務や要件・小さな試し方を示す。適職の診断や採用見込みの予測はしない。 |
+| Career | [`job-search-plan`](skills/career/job-search-plan/) | 在職しながら転職活動や情報収集を進める段取り。週に使える時間と活動の合計、平日日中の枠、経路ごとの開示範囲と取り決め、応募ごとの段階・次の行動・期限を1つの表に揃え、見直す日と止める条件を決める。応募先の推薦、求人の評価、合否の予測はしない。 |
 | Documents | [`entry-sheet-review`](skills/documents/entry-sheet-review/) | ES・履歴書・職務経歴書を、設問適合・事実の裏づけ・文字数の3点に分けて確認し、利用者が選べる改稿案を出す。 |
 | Research | [`company-research`](skills/research/company-research/) | 応募先を一次情報・公式情報から調べ、すべての事実に出典と時点を付ける。口コミやまとめ記事は事実にせず、面接で確認する論点として残す。 |
 | Research | [`job-posting-analysis`](skills/research/job-posting-analysis/) | 求人票の提示年収から固定残業代を分離し、みなし残業込みの時給に換算する。要件の充足状況と、確認すべき曖昧な条件を出す。 |
@@ -207,7 +208,7 @@ otame4-work-skills/
 
 | カテゴリ | 範囲 |
 | --- | --- |
-| `career` | 自己分析、就活・転職の軸、キャリア設計、転職の意思決定 |
+| `career` | 自己分析、就活・転職の軸、キャリア設計、転職の意思決定、在職中の転職活動の段取り |
 | `documents` | ES、履歴書、職務経歴書、ポートフォリオの作成と添削 |
 | `interview` | 面接・面談対策、想定質問、逆質問、振り返り |
 | `research` | 業界・企業研究、求人票の読み解き、応募先の選定 |

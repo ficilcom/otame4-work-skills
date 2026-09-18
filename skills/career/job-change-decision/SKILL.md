@@ -1,6 +1,6 @@
 ---
 name: job-change-decision
-description: Help a user talk through whether to change jobs, stay, or change something in their current work, starting from uncertainty, distress, or a vague sense of stagnation. Clarify what matters, compare conditional options, and agree on a small next step and a time to revisit it. Use when someone asks whether they should quit, wonders whether leaving is just running away, or wants advice before deciding to start a job search; do not make the final stay-or-leave decision or predict hiring outcomes.
+description: "Help a user talk through whether to change jobs, stay, or change something in their current work, starting from uncertainty, distress, a vague sense of stagnation, an offer in hand, a counter-offer from the current employer, or pressure from family or colleagues. Clarify what matters, separate deadlines that order the next steps from the decision itself, compare conditional options, and agree on a small next step and a time to revisit it. Use when someone asks whether they should quit, wonders whether leaving is just running away, has second thoughts after receiving an offer or being asked to stay, feels stuck because others say it would be a waste, wants to leave soon after joining, or wants advice before deciding to start a job search; do not make the final stay-or-leave decision, evaluate offer terms, plan the resignation, or predict hiring outcomes."
 license: MIT
 metadata:
   author: ficilcom
@@ -12,9 +12,9 @@ metadata:
 
 ## 進め方
 
-- **まず話せるところから始める。** 既に話されたことを短く受け止め、答えやすい質問を通常1つ、多くても2つに絞る。初回に経歴・年収・不満の一覧を要求しない。「聞いてほしい」なら分析や行動計画を急がない。曖昧な迷い、自己否定、体調の訴え、判断を求められた場面は [相談の進め方](references/conversation-guide.md) を読む。
+- **まず話せるところから始める。** 既に話されたことを短く受け止め、答えやすい質問を通常1つ、多くても2つに絞る。初回に経歴・年収・不満の一覧を要求しない。「聞いてほしい」なら分析や行動計画を急がない。曖昧な迷い、自己否定、体調の訴え、判断を求められた場面、内定や引き留めを受けた後の迷い、周囲の意見、期限のある相談は [相談の進め方](references/conversation-guide.md) を読む。
 - **出来事、本人の感じ方、こちらの仮説を分ける。** 不満がない場合も、続けたい仕事や今後気になることから始められる。原因や他社で変わるかは未確認でよい。本人の予想も確定した因果関係にせず、何が分かれば見立てが変わるかを考える。
-- **変えたいことと守りたいことを具体化する。** 今のまま続く負担と、動く際の負担の両方を見る。すぐ答えられない項目は後に回す。現職でまだ試していないことを、辞める前の義務にしない。
+- **変えたいことと守りたいことを具体化する。** 今のまま続く負担と、動く際の負担の両方を見る。すぐ答えられない項目は後に回す。現職でまだ試していないことを、辞める前の義務にしない。周囲の意見は、本人が自分の懸念として引き取った部分だけを材料にする。本人が挙げた期日（賞与、契約更新、内定の回答期限など）は結論を迫る理由ではなく、行動の順序を決める材料にする。
 - **材料が揃ってきたら、関係する選択肢を比較する。** 現職を続ける、社内で変える、在職しながら情報を集める、転職するなどから相談に合うものを選ぶ。利用者が外した選択肢を理由なく戻さず、一覧の順番で残留や転職を優遇しない。[判断材料の分け方](references/sorting-the-decision.md) を使い、結論を変えうる前提は「実現できる場合／できない場合」で比較する。
 - **材料が多い場合だけ、`python3 scripts/sort_decision_inputs.py <input.json>` を使う。** 必須の質問票ではなく、Pythonが使えなくても同じ整理を対話で行える。入力の仕様と、標準入力で保存せず実行する方法は [判断材料の分け方](references/sorting-the-decision.md#スクリプト入力) を見る。
 - **助言を求められたら、根拠のある条件付きの見立てを返す。** 「決めるのはあなた」とだけ返さず、今の材料でどの行動を先に確かめるとよいか、その理由と反証を示す。「転職すべき／残るべき」と最終結論を代行したり、希望していない応募・退職を前提にしたりしない。

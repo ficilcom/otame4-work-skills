@@ -115,7 +115,7 @@ class BothSidesTest(unittest.TestCase):
 class OptionsTest(unittest.TestCase):
     def test_every_option_appears_even_when_not_supplied(self):
         report = MODULE.sort_inputs(payload(options=[]))
-        self.assertEqual(len(report["options"]), 9)
+        self.assertEqual(len(report["options"]), 10)
         self.assertEqual(option(report, "leave_of_absence")["status"], "not_considered")
 
     def test_ruling_an_option_out_counts_as_having_considered_it(self):
@@ -125,6 +125,13 @@ class OptionsTest(unittest.TestCase):
     def test_considering_only_leaving_is_flagged(self):
         report = MODULE.sort_inputs(payload(options=[{"code": "job_change", "status": "considered"}]))
         self.assertIn("staying_not_considered", codes(report))
+
+    def test_exploring_while_employed_counts_as_staying(self):
+        report = MODULE.sort_inputs(
+            payload(options=[{"code": "explore_while_employed", "status": "considered"}])
+        )
+        self.assertTrue(option(report, "explore_while_employed")["keeps_current_job"])
+        self.assertNotIn("staying_not_considered", codes(report))
 
     def test_untouched_options_are_listed(self):
         report = MODULE.sort_inputs(payload())
@@ -150,6 +157,57 @@ class DecisionTest(unittest.TestCase):
     def test_defined_criteria_clear_the_flag(self):
         report = MODULE.sort_inputs(payload())
         self.assertNotIn("decision_criteria_undefined", codes(report))
+
+
+class ConstraintsTest(unittest.TestCase):
+    def test_days_until_each_constraint_are_counted(self):
+        report = MODULE.sort_inputs(
+            payload(constraints=[{"text": "賞与の支給日", "date": "2026-12-10"}])
+        )
+        self.assertEqual(report["constraints"][0]["days_until"], 100)
+        self.assertFalse(report["constraints"][0]["before_deadline"])
+        self.assertNotIn("constraints_before_deadline", codes(report))
+
+    def test_a_constraint_before_the_deadline_is_flagged_as_ordering(self):
+        report = MODULE.sort_inputs(
+            payload(constraints=[{"text": "契約更新の通知", "date": "2026-10-15"}])
+        )
+        flag = next(f for f in report["flags"] if f["code"] == "constraints_before_deadline")
+        self.assertEqual(flag["items"], ["契約更新の通知"])
+        self.assertIn("決めるべきという意味ではない", flag["message"])
+
+    def test_a_passed_constraint_is_flagged_and_not_reported_as_upcoming(self):
+        report = MODULE.sort_inputs(
+            payload(constraints=[{"text": "賞与の支給日", "date": "2026-07-10"}])
+        )
+        self.assertIn("constraints_passed", codes(report))
+        self.assertNotIn("constraints_before_deadline", codes(report))
+
+    def test_an_undated_constraint_is_kept_and_flagged(self):
+        report = MODULE.sort_inputs(payload(constraints=[{"text": "育児休業の予定"}]))
+        self.assertIsNone(report["constraints"][0]["days_until"])
+        self.assertIn("constraints_undated", codes(report))
+
+    def test_constraints_are_ordered_by_date_with_undated_last(self):
+        report = MODULE.sort_inputs(
+            payload(
+                constraints=[
+                    {"text": "後の期日", "date": "2026-12-10"},
+                    {"text": "日付なし"},
+                    {"text": "先の期日", "date": "2026-10-01"},
+                ]
+            )
+        )
+        self.assertEqual(
+            [item["text"] for item in report["constraints"]], ["先の期日", "後の期日", "日付なし"]
+        )
+
+    def test_constraints_without_as_of_have_no_day_counts(self):
+        report = MODULE.sort_inputs(
+            payload(as_of=None, constraints=[{"text": "賞与の支給日", "date": "2026-12-10"}])
+        )
+        self.assertIsNone(report["constraints"][0]["days_until"])
+        self.assertNotIn("constraints_passed", codes(report))
 
 
 class OutputContractTest(unittest.TestCase):
@@ -193,7 +251,7 @@ class CommandLineTest(unittest.TestCase):
     def test_stdin_round_trip(self):
         completed = run_script(SCRIPT, payload())
         self.assertEqual(completed.returncode, 0)
-        self.assertEqual(json.loads(completed.stdout)["summary"]["options_total"], 9)
+        self.assertEqual(json.loads(completed.stdout)["summary"]["options_total"], 10)
 
     def test_invalid_payload_exits_with_two(self):
         completed = run_script(SCRIPT, {"concerns": [{"id": "", "text": "x"}]})

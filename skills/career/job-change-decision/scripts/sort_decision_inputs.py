@@ -3,11 +3,13 @@
 
 現職への不満を、原因の所在、転職しても付いてくるか、現職でまだ試していないかで
 分ける。行き先で得たいものと、いま持っていて失うものが両方挙がっているかを確認
-し、留まる選択肢が検討されたかを数える。どちらを選ぶべきかは出さない。
+し、留まる選択肢が検討されたかを数える。本人が挙げた事情の期日を判断期限と
+並べ、順序を見落としやすいものを示す。どちらを選ぶべきかは出さない。
 """
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
 from _common import (
@@ -37,6 +39,7 @@ OPTIONS: tuple[tuple[str, str, bool], ...] = (
     ("internal_transfer", "社内異動", True),
     ("role_change", "現職内での職種転換", True),
     ("leave_of_absence", "休職・療養", True),
+    ("explore_while_employed", "在職しながら情報を集める（求人票を読む、話を聞く）", True),
     ("upskilling", "先に学習や資格取得を行う", False),
     ("side_work", "副業（就業規則の定めを確認する）", True),
     ("job_change", "転職", False),
@@ -166,12 +169,37 @@ def sort_concerns(concerns: list[dict[str, Any]]) -> dict[str, list[str]]:
     }
 
 
+def sort_constraints(
+    constraints: list[dict[str, Any]], as_of: date | None, deadline: date | None
+) -> list[dict[str, Any]]:
+    """事情の期日に、基準日からの日数と判断期限との前後を付ける。"""
+    sorted_constraints = []
+    for item in constraints:
+        constraint_date = item["date"]
+        sorted_constraints.append(
+            {
+                "text": item["text"],
+                "date": constraint_date.isoformat() if constraint_date else None,
+                "days_until": (constraint_date - as_of).days if constraint_date and as_of else None,
+                "before_deadline": (
+                    constraint_date <= deadline if constraint_date and deadline else None
+                ),
+            }
+        )
+    # 期日の近い順。日付のないものは末尾に置く。
+    return sorted(
+        sorted_constraints,
+        key=lambda item: (item["date"] is None, item["date"] or ""),
+    )
+
+
 def collect_flags(
     concerns: list[dict[str, Any]],
     wants: list[dict[str, Any]],
     keeps: list[dict[str, Any]],
     options: list[dict[str, Any]],
     sorted_concerns: dict[str, list[str]],
+    constraints: list[dict[str, Any]],
     days_to_deadline: int | None,
     criteria_defined: bool | None,
 ) -> list[dict[str, Any]]:
@@ -248,6 +276,28 @@ def collect_flags(
     if days_to_deadline is not None and days_to_deadline < 0:
         add("decision_deadline_passed", "自分で決めた判断期限を過ぎている")
 
+    passed = [
+        item["text"]
+        for item in constraints
+        if item["days_until"] is not None and item["days_until"] < 0
+    ]
+    if passed:
+        add("constraints_passed", "期日を過ぎた事情がある。今も判断に関係するかを確認できる", passed)
+    before_deadline = [
+        item["text"]
+        for item in constraints
+        if item["before_deadline"] and (item["days_until"] is None or item["days_until"] >= 0)
+    ]
+    if before_deadline:
+        add(
+            "constraints_before_deadline",
+            "判断期限より前に来る事情の期日がある。その期日までに何を確かめるかで行動の順序が決まる。期日に合わせて決めるべきという意味ではない",
+            before_deadline,
+        )
+    undated = [item["text"] for item in constraints if item["date"] is None]
+    if undated:
+        add("constraints_undated", "期日が未確認の事情がある。本人の職場の書面で確認できる", undated)
+
     return flags
 
 
@@ -280,6 +330,7 @@ def sort_inputs(payload: object) -> dict[str, Any]:
     ]
 
     sorted_concerns = sort_concerns(concerns)
+    sorted_constraints = sort_constraints(constraints, as_of, deadline)
 
     return {
         "as_of": data.get("as_of"),
@@ -299,20 +350,25 @@ def sort_inputs(payload: object) -> dict[str, Any]:
         "wants": wants,
         "keeps": keeps,
         "options": options,
-        "constraints": [
-            {"text": item["text"], "date": item["date"].isoformat() if item["date"] else None}
-            for item in constraints
-        ],
+        "constraints": sorted_constraints,
         "decision": {
             "deadline": deadline.isoformat() if deadline else None,
             "days_to_deadline": days_to_deadline,
             "criteria_defined": criteria_defined,
         },
         "flags": collect_flags(
-            concerns, wants, keeps, options, sorted_concerns, days_to_deadline, criteria_defined
+            concerns,
+            wants,
+            keeps,
+            options,
+            sorted_concerns,
+            sorted_constraints,
+            days_to_deadline,
+            criteria_defined,
         ),
         "notes": [
             "この出力は判断の材料を分けたものであり、転職すべきかどうかの結論ではない",
+            "constraints の期日は行動の順序を決める材料であり、その期日に合わせて決めるべきという意味ではない",
             "portable と tried_internally は利用者自身の判断であって、こちらの評価ではない",
             "severity は利用者の申告であり、優先順位の決定ではない",
         ],
