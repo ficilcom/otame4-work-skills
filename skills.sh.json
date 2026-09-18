@@ -14,8 +14,8 @@
     },
     {
       "title": "自己分析・転職相談",
-      "description": "経験の棚卸し、就活・転職の軸、次の仕事の探索、転職の意思決定。Career planning.",
-      "skills": ["career-inventory", "job-hunting-axis", "career-options", "job-change-decision"]
+      "description": "経験の棚卸し、就活・転職の軸、次の仕事の探索、転職の意思決定、在職中の転職活動の段取り。Career planning.",
+      "skills": ["career-inventory", "job-hunting-axis", "career-options", "job-change-decision", "job-search-plan"]
     },
     {
       "title": "ES・履歴書・職務経歴書",
