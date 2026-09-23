@@ -21,6 +21,7 @@ from _common import (
     require_list,
     require_object,
     require_raw_text,
+    round_hours,
     round_yen,
     run_cli,
 )
@@ -118,14 +119,6 @@ TEXT_CHECKS: tuple[tuple[str, str, str, str, tuple[str, ...]], ...] = (
         ("paid_work",),
     ),
 )
-
-HOUR = Decimal("0.01")
-
-
-def as_hours(value: Decimal | None) -> float | None:
-    if value is None:
-        return None
-    return float(value.quantize(HOUR))
 
 
 def parse_listing(raw: object) -> dict[str, Any]:
@@ -268,9 +261,9 @@ def build_numbers(plan: dict[str, Any] | None) -> dict[str, Any] | None:
         over = cost_high > budget
 
     return {
-        "candidate_hours_min": as_hours(low),
-        "candidate_hours_max": as_hours(high),
-        "period_capacity_hours": as_hours(capacity),
+        "candidate_hours_min": round_hours(low),
+        "candidate_hours_max": round_hours(high),
+        "period_capacity_hours": round_hours(capacity),
         "fits_period": fits_period,
         "basis": plan["basis"],
         "planned_cost_min": round_yen(cost_low),

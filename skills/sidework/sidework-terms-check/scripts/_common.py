@@ -36,6 +36,7 @@ from typing import Any, Callable
 MONTH_PATTERN = re.compile(r"^(\d{4})-(\d{2})$")
 WHITESPACE_RUN_PATTERN = re.compile(r"\s+")
 YEN = Decimal("1")
+HOUR = Decimal("0.01")
 
 # 本文に混ざった個人情報を見つけるための検査。scripts/validate_skills.py の
 # リポジトリ側ガードと同じ規則を使う。
@@ -187,6 +188,13 @@ def round_yen(value: Decimal | None) -> int | None:
     if value is None:
         return None
     return int(value.quantize(YEN, rounding=ROUND_HALF_UP))
+
+
+def round_hours(value: Decimal | None) -> float | None:
+    """時間を0.01時間単位に丸めて返す。None は None のままにする。"""
+    if value is None:
+        return None
+    return float(value.quantize(HOUR))
 
 
 def strip_whitespace(text: str) -> str:

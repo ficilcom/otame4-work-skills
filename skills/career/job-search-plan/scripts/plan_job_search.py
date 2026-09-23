@@ -22,6 +22,7 @@ from _common import (
     require_list,
     require_object,
     require_text,
+    round_hours,
     run_cli,
     strip_whitespace,
 )
@@ -56,14 +57,6 @@ INTERMEDIATED_KINDS = ("agent", "referral")
 PROFILE_CAPABLE_KINDS = ("job_board", "scout_site")
 # 公開プロフィールが現職に見えないよう設定できているか。
 BLOCK_STATES = ("yes", "no", "unknown", "not_applicable")
-
-HOUR = Decimal("0.01")
-
-
-def as_hours(value: Decimal | None) -> float | None:
-    if value is None:
-        return None
-    return float(value.quantize(HOUR))
 
 
 def days_from(as_of: date | None, target: date | None) -> int | None:
@@ -395,21 +388,21 @@ def plan_job_search(payload: object) -> dict[str, Any]:
         "as_of": data.get("as_of"),
         "summary": {
             "employed": employed,
-            "weekly_hours_available": as_hours(available),
-            "weekly_hours_planned": as_hours(planned),
-            "weekly_hours_margin": as_hours(margin),
+            "weekly_hours_available": round_hours(available),
+            "weekly_hours_planned": round_hours(planned),
+            "weekly_hours_margin": round_hours(margin),
             "applications_active": sum(stage_counts[stage] for stage in ACTIVE_STAGES),
             "applications_by_stage": stage_counts,
             "channels": len(channels),
             "days_to_review": days_to_review,
         },
         "time": {
-            "weekly_hours_available": as_hours(available),
+            "weekly_hours_available": round_hours(available),
             "weekday_daytime_available": weekday_daytime_available,
             "activities": [
                 {
                     "label": item["label"],
-                    "weekly_hours": as_hours(item["weekly_hours"]),
+                    "weekly_hours": round_hours(item["weekly_hours"]),
                     "weekday_daytime": item["weekday_daytime"],
                 }
                 for item in activities

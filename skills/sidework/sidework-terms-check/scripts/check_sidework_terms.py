@@ -24,6 +24,7 @@ from _common import (
     require_list,
     require_object,
     require_text,
+    round_hours,
     round_yen,
     run_cli,
 )
@@ -81,15 +82,6 @@ CHECKLIST: tuple[tuple[str, str, str, bool, bool], ...] = (
     ("termination", "中途解除・中止のときの報酬と予告", "exit", False, True),
 )
 CHECKLIST_CODES = {code for code, _, _, _, _ in CHECKLIST}
-
-HOUR = Decimal("0.01")
-
-
-def as_hours(value: Decimal | None) -> float | None:
-    """時間を0.01単位に丸めて返す。None は None のままにする。"""
-    if value is None:
-        return None
-    return float(value.quantize(HOUR))
 
 
 def parse_offer(raw: object) -> dict[str, Any]:
@@ -252,12 +244,12 @@ def build_hours(tasks: list[dict[str, Any]]) -> dict[str, Any]:
     paid_low, paid_high = sum_hours([task for task in tasks if task["paid"] is True])
     unpaid_low, unpaid_high = sum_hours([task for task in tasks if task["paid"] is False])
     return {
-        "total_min": as_hours(total_low),
-        "total_max": as_hours(total_high),
-        "paid_min": as_hours(paid_low),
-        "paid_max": as_hours(paid_high),
-        "unpaid_min": as_hours(unpaid_low),
-        "unpaid_max": as_hours(unpaid_high),
+        "total_min": round_hours(total_low),
+        "total_max": round_hours(total_high),
+        "paid_min": round_hours(paid_low),
+        "paid_max": round_hours(paid_high),
+        "unpaid_min": round_hours(unpaid_low),
+        "unpaid_max": round_hours(unpaid_high),
         "unestimated": [task["label"] for task in tasks if task["hours"] is None],
         "payment_status_unknown": [
             task["label"] for task in tasks if task["paid"] is None and task["hours"] is not None
@@ -377,10 +369,10 @@ def build_schedule(availability: dict[str, Any], hours: dict[str, Any]) -> dict[
         fits = weekly_high <= available
 
     return {
-        "weeks": as_hours(weeks),
-        "weekly_available_hours": as_hours(available),
-        "weekly_needed_min": as_hours(weekly_low),
-        "weekly_needed_max": as_hours(weekly_high),
+        "weeks": round_hours(weeks),
+        "weekly_available_hours": round_hours(available),
+        "weekly_needed_min": round_hours(weekly_low),
+        "weekly_needed_max": round_hours(weekly_high),
         "fits_weekly_availability": fits,
     }
 
@@ -573,7 +565,7 @@ def check(payload: object) -> dict[str, Any]:
         "money": money,
         "payment": payment,
         "schedule": schedule,
-        "revisions": {"rounds": revisions["rounds"], "hours": as_hours(revisions["hours"])},
+        "revisions": {"rounds": revisions["rounds"], "hours": round_hours(revisions["hours"])},
         "summary": {
             "items_in_scope": len(in_scope),
             "items_in_writing": sum(

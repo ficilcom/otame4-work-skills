@@ -20,6 +20,7 @@ from _common import (
     require_list,
     require_object,
     require_text,
+    round_hours,
     round_yen,
     run_cli,
 )
@@ -30,14 +31,6 @@ PAY_BASIS = ("hourly", "fixed", "none", "unknown")
 # 金額の出所。`official` は公式の料金表示や見積書、`estimate` は社内の見込み。
 AMOUNT_SOURCES = ("official", "quote", "estimate", "unknown")
 CONFIRMED_SOURCES = ("official", "quote")
-
-HOUR = Decimal("0.01")
-
-
-def as_hours(value: Decimal | None) -> float | None:
-    if value is None:
-        return None
-    return float(value.quantize(HOUR))
 
 
 def parse_candidate_pay(raw: object) -> dict[str, Any]:
@@ -133,8 +126,8 @@ def build_candidate_pay(pay: dict[str, Any]) -> dict[str, Any]:
         low = high = Decimal(0)
     return {
         "basis": pay["basis"],
-        "hours_min": as_hours(pay["hours"]),
-        "hours_max": as_hours(hours_high),
+        "hours_min": round_hours(pay["hours"]),
+        "hours_max": round_hours(hours_high),
         "pay_min": round_yen(low),
         "pay_max": round_yen(high),
         "expenses": round_yen(pay["expenses"]),
@@ -151,11 +144,11 @@ def build_company_hours(entries: list[dict[str, Any]]) -> dict[str, Any]:
     if known and len(known) == len(entries) and all(entry["hourly_cost"] is not None for entry in known):
         costed = sum((entry["hours"] * entry["hourly_cost"] for entry in known), Decimal(0))
     return {
-        "total_hours": as_hours(total),
+        "total_hours": round_hours(total),
         "by_role": [
             {
                 "role": entry["role"],
-                "hours": as_hours(entry["hours"]),
+                "hours": round_hours(entry["hours"]),
                 "hourly_cost": round_yen(entry["hourly_cost"]),
                 "cost": round_yen(entry["hours"] * entry["hourly_cost"])
                 if entry["hours"] is not None and entry["hourly_cost"] is not None

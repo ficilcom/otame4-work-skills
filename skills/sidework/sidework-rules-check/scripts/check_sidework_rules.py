@@ -21,6 +21,7 @@ from _common import (
     optional_text,
     require_list,
     require_object,
+    round_hours,
     run_cli,
 )
 
@@ -111,14 +112,6 @@ APPLICATION_CODES = {code for code, _ in APPLICATION_FACTS}
 DEFAULT_REFERENCE_WEEKLY_HOURS = Decimal(40)
 WEEKS_PER_MONTH = Decimal(52) / Decimal(12)
 DAYS_PER_WEEK = 7
-HOUR = Decimal("0.01")
-
-
-def as_hours(value: Decimal | None) -> float | None:
-    """時間を0.01単位に丸めて返す。None は None のままにする。"""
-    if value is None:
-        return None
-    return float(value.quantize(HOUR))
 
 
 def parse_rules(raw: object) -> dict[str, Any]:
@@ -272,17 +265,17 @@ def build_hours(hours: dict[str, Any], engagement: str) -> dict[str, Any]:
         over_health_reference = over_monthly > health_reference
 
     return {
-        "main_scheduled_weekly": as_hours(main),
-        "main_overtime_weekly": as_hours(overtime),
-        "sidework_weekly": as_hours(side),
+        "main_scheduled_weekly": round_hours(main),
+        "main_overtime_weekly": round_hours(overtime),
+        "sidework_weekly": round_hours(side),
         "missing_inputs": missing,
-        "total_weekly": as_hours(total),
-        "scheduled_total_weekly": as_hours(scheduled_total),
-        "reference_weekly_hours": as_hours(reference),
+        "total_weekly": round_hours(total),
+        "scheduled_total_weekly": round_hours(scheduled_total),
+        "reference_weekly_hours": round_hours(reference),
         "reference_supplied": hours["reference_supplied"],
-        "over_reference_weekly": as_hours(over_weekly),
-        "over_reference_monthly": as_hours(over_monthly),
-        "health_reference_monthly_hours": as_hours(health_reference),
+        "over_reference_weekly": round_hours(over_weekly),
+        "over_reference_monthly": round_hours(over_monthly),
+        "health_reference_monthly_hours": round_hours(health_reference),
         "over_health_reference": over_health_reference,
         "rest_days_per_week": hours["rest_days_per_week"],
         "aggregation_applies_to_engagement": engagement in ("employment", "unknown"),
