@@ -165,6 +165,17 @@ class CheckpointTest(unittest.TestCase):
         )
         self.assertIn("no_checkpoint_before_probation_review", codes(report))
 
+    def test_recruiter_checkpoint_does_not_count_as_probation_review(self):
+        report = MODULE.plan(
+            payload(
+                checkpoints=[
+                    {"label": "書類の確認", "date": "2026-10-20", "with": "recruiter", "topics": ["x1"]}
+                ]
+            )
+        )
+        self.assertIn("no_checkpoint_before_probation_review", codes(report))
+        self.assertEqual(len(report["suggested_checkpoints"]), 3)
+
     def test_early_checkpoint_clears_the_probation_flag(self):
         report = MODULE.plan(payload())
         self.assertNotIn("no_checkpoint_before_probation_review", codes(report))

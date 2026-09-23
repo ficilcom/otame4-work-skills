@@ -165,6 +165,39 @@ class TimelineTest(unittest.TestCase):
         self.assertEqual(report["gaps"][0]["from"], "2022-04")
         self.assertIn("timeline_gap", codes(report))
 
+    def test_concurrent_short_role_does_not_create_a_false_gap(self):
+        report = MODULE.check(
+            payload(
+                timeline=[
+                    {"label": "架空A社", "start": "2020-04", "end": "2024-12"},
+                    {"label": "架空副業", "start": "2021-01", "end": "2021-03"},
+                    {"label": "架空B社", "start": "2025-01", "end": None},
+                ],
+                experiences=[experience()],
+            )
+        )
+        self.assertEqual(report["gaps"], [])
+        self.assertEqual(report["overlaps"], [{"labels": ["架空A社", "架空副業"], "months": 3}])
+
+    def test_gap_after_the_longest_period_is_measured_from_its_end(self):
+        report = MODULE.check(
+            payload(
+                timeline=[
+                    {"label": "架空A社", "start": "2020-04", "end": "2023-03"},
+                    {"label": "架空副業", "start": "2021-01", "end": "2021-03"},
+                    {"label": "架空B社", "start": "2023-07", "end": None},
+                ],
+                experiences=[experience()],
+            )
+        )
+        self.assertEqual(report["gaps"][0]["from"], "2023-04")
+        self.assertEqual(report["gaps"][0]["months"], 3)
+
+    def test_unknown_format_has_no_ordering(self):
+        report = MODULE.check(payload(format=None))
+        self.assertIsNone(report["outline"]["sections"])
+        self.assertIn("format_undecided", codes(report))
+
     def test_overlap_is_reported(self):
         report = MODULE.check(
             payload(

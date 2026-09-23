@@ -178,27 +178,33 @@ def build_requirements(
 
 
 def build_gaps(timeline: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    ordered = sorted(timeline, key=lambda period: period["start"])
+    # 空白は、それまでの期間のどれかがまだ続いている間は生じない。直前の1件ではなく、
+    # それまでに届いた最も遅い終わりと比べる（長い本業の中に短い兼務がある場合など）。
+    ordered = sorted(timeline, key=lambda period: (period["start"], period["end_for_math"]))
     gaps, overlaps = [], []
-    for previous, current in zip(ordered, ordered[1:]):
-        distance = current["start"] - previous["end_for_math"] - 1
+    covering = ordered[0]
+    for current in ordered[1:]:
+        reached = covering["end_for_math"]
+        distance = current["start"] - reached - 1
         if distance > 0:
             gaps.append(
                 {
-                    "after": previous["label"],
+                    "after": covering["label"],
                     "before": current["label"],
-                    "from": format_month(previous["end_for_math"] + 1),
+                    "from": format_month(reached + 1),
                     "to": format_month(current["start"] - 1),
                     "months": distance,
                 }
             )
-        elif current["start"] <= previous["end_for_math"]:
+        elif current["start"] <= reached:
             overlaps.append(
                 {
-                    "labels": [previous["label"], current["label"]],
-                    "months": previous["end_for_math"] - current["start"] + 1,
+                    "labels": [covering["label"], current["label"]],
+                    "months": min(reached, current["end_for_math"]) - current["start"] + 1,
                 }
             )
+        if current["end_for_math"] > reached:
+            covering = current
     return gaps, overlaps
 
 
@@ -219,7 +225,11 @@ def build_outline(
             "employment_list": [period["label"] for period in periods],
         }
 
-    newest_first = fmt != "chronological"
+    if fmt == "unknown":
+        # 形式が決まるまで並び順を作らない。1つの形式を選んだように見せないため。
+        return {"format": fmt, "sections": None, "unassigned": None}
+
+    newest_first = fmt == "reverse_chronological"
     periods = sorted(timeline, key=lambda period: period["start"], reverse=newest_first)
     sections = []
     for period in periods:

@@ -139,4 +139,4 @@
 python3 scripts/check_resume_plan.py input.json
 ```
 
-出力の `requirements` は要件ごとの対応する経験、`outline` は選んだ形式での並び順（キャリア式では種類ごとのまとまりと在籍期間の一覧）、`gaps` と `overlaps` は在籍期間の空白と重なり、`flags` は下書きの前に決めること。
+出力の `requirements` は要件ごとの対応する経験、`outline` は選んだ形式での並び順（キャリア式では種類ごとのまとまりと在籍期間の一覧。形式が `unknown` の間は並び順を作らない）、`gaps` と `overlaps` は在籍期間の空白と重なり、`flags` は下書きの前に決めること。

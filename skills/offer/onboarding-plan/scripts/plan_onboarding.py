@@ -345,12 +345,14 @@ def collect_flags(
         early = [
             checkpoint
             for checkpoint in checkpoints
-            if checkpoint["date"] is not None and checkpoint["date"] <= review_by
+            if checkpoint["date"] is not None
+            and checkpoint["date"] <= review_by
+            and checkpoint["with"] == "manager"
         ]
         if not early:
             add(
                 "no_checkpoint_before_probation_review",
-                f"試用期間の終わりの{PROBATION_REVIEW_LEAD_DAYS}日前（{review_by.isoformat()}）までに確かめる場がない",
+                f"試用期間の終わりの{PROBATION_REVIEW_LEAD_DAYS}日前（{review_by.isoformat()}）までに、上長と確かめる場がない",
             )
 
     if as_of is not None:
@@ -419,7 +421,7 @@ def plan(payload: object) -> dict[str, Any]:
         ],
         "suggested_checkpoints": (
             suggest_checkpoints(start, probation["end_date"] if probation["exists"] else None)
-            if not checkpoints and start is not None
+            if start is not None and not any(item["with"] == "manager" for item in checkpoints)
             else []
         ),
         "pre_start_tasks": [

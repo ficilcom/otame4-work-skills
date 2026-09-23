@@ -132,7 +132,7 @@
 - `confirm_with` と `checkpoints[].with` は `recruiter` / `manager` / `hr` / `agent` / `undecided`。
 - `confirmed` は、入社後に上長などと確かめ終えたら `true` にする。
 - `checkpoints[].topics` は、その場で確かめる `expectations` の `id`。
-- `checkpoints` を1つも入れないと、入社日と試用期間から目安の日付を `suggested_checkpoints` に出す。
+- 上長（`manager`）と確かめる場が1つも入っていないと、入社日と試用期間から上長との場の目安の日付を `suggested_checkpoints` に出す。試用期間の基準を確かめる場は、上長との場だけを数える。
 
 実行:
 
