@@ -51,7 +51,7 @@
 | 在職しながら情報収集や転職活動を進める段取りを組む | `job-search-plan` |
 | 見つけた求人票やスカウトを読み解く | `job-posting-analysis`、`scout-message-triage` |
 | 応募先を公開情報で調べる | `company-research` |
-| 出ている内定の条件を確認する・複数の内定を揃えて比べる | `offer-terms-check`、`offer-comparison` |
+| 出ている内定の条件を確認する・複数の内定を揃えて比べる・条件の変更を依頼する | `offer-terms-check`、`offer-comparison`、`offer-negotiation` |
 | 辞退の相手と段階を整理する | `offer-decline` |
 | 退職と入社の段取りを組む（退職を決めた後） | `resignation-plan` |
 | 副業の可否と就業規則を確認する | `sidework-rules-check` |

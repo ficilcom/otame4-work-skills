@@ -19,7 +19,7 @@ metadata:
 5. `python3 scripts/check_inventory_coverage.py <input.json>` で、不足している項目、裏づけの弱い経験、棚卸しできていない在籍期間、種類の偏りを機械的に確認する。入力形式は [棚卸しの進め方](references/inventory-method.md#スクリプト入力) を見る。
 6. 現職・前職の非公開情報を含む経験に印を付け、抽象化できるかを先に決める。抽象化できないものは、使わない選択肢も残す。
 7. [報告書形式](references/report-format.md) に従って、棚卸しの進み具合、経験の一覧、裏づけの確認が必要なもの、利用者への質問を出す。**埋まっていない項目は、埋まっていないまま次に渡す。**
-8. 次に渡す先を示す。書類を書くなら `entry-sheet-review`、面接の準備なら `interview-prep`、求人の要件との突き合わせなら `job-posting-analysis`。
+8. 次に渡す先を示す。職務経歴書を組み立てるなら `resume-draft`、設問への回答を書く・直すなら `entry-sheet-review`、面接の準備なら `interview-prep`、求人の要件との突き合わせなら `job-posting-analysis`。
 
 ## 判断上の制約
 

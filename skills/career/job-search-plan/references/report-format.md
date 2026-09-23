@@ -47,11 +47,12 @@
 | 転職するか自体を考え直す | `job-change-decision` |
 | 応募先を選ぶ基準を作る | `job-hunting-axis` |
 | 経験を事実として棚卸しする・応募資料の抽象化 | `career-inventory` |
+| 職務経歴書を組み立てる | `resume-draft` |
 | 書類を添削する | `entry-sheet-review` |
 | 求人票を読み解く・スカウトを仕分ける | `job-posting-analysis`、`scout-message-triage` |
 | 応募先を公開情報で調べる | `company-research` |
 | 面接の準備・振り返り | `interview-prep`、`interview-debrief` |
-| 内定の条件を確認する・比べる・辞退する | `offer-terms-check`、`offer-comparison`、`offer-decline` |
+| 内定の条件を確認する・比べる・変更を依頼する・辞退する | `offer-terms-check`、`offer-comparison`、`offer-negotiation`、`offer-decline` |
 | 退職と入社の段取り（退職を決めた後） | `resignation-plan` |
 
 利用者が明示的に求めない限り、このまとめを保存しない。

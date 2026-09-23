@@ -67,11 +67,12 @@
     },
     {
       "name": "otame4-documents",
-      "description": "Entry sheets, rirekisho, and shokumu-keirekisho: drafting and review against the question asked, the evidence available, and the character limit. (1 skill)",
+      "description": "Entry sheets, rirekisho, and shokumu-keirekisho: assembling a career history document from an experience inventory against a posting's requirements, and reviewing answers against the question asked, the evidence available, and the character limit. (2 skills)",
       "version": "0.1.0",
       "source": "./skills/documents",
       "skills": [
-        "./entry-sheet-review"
+        "./entry-sheet-review",
+        "./resume-draft"
       ],
       "category": "productivity",
       "tags": [
@@ -118,13 +119,15 @@
     },
     {
       "name": "otame4-offer",
-      "description": "Offer decisions and the exits: checking the conditions an employer has stated in writing, putting several offers on one basis, declining the rest, and planning the resignation and the move. (4 skills)",
+      "description": "Offer decisions and the moves around them: checking the conditions an employer has stated in writing, putting several offers on one basis, preparing a request to change the terms, declining the rest, planning the resignation, and laying out the first months at the new employer. (6 skills)",
       "version": "0.1.0",
       "source": "./skills/offer",
       "skills": [
         "./offer-comparison",
         "./offer-decline",
+        "./offer-negotiation",
         "./offer-terms-check",
+        "./onboarding-plan",
         "./resignation-plan"
       ],
       "category": "productivity",

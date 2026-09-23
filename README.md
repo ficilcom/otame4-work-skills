@@ -1,10 +1,10 @@
 # Otame4 Work Skills — 就活・転職・採用のAIスキル
 
-日本の就職活動と転職のための [Agent Skills](https://agentskills.io/) 集。自己分析、エントリーシート・履歴書・職務経歴書の添削、面接対策、企業研究、内定の判断、おためし転職の体験準備、企業側の業務設計・募集文・社内説明・応募者対応・契約条件・振り返り、副業の可否と案件条件の確認までを扱う。
+日本の就職活動と転職のための [Agent Skills](https://agentskills.io/) 集。自己分析、職務経歴書の組み立てとエントリーシート・履歴書の添削、面接対策、企業研究、内定の判断と条件交渉の準備、入社後の段取り、おためし転職の体験準備、企業側の業務設計・募集文・社内説明・応募者対応・契約条件・振り返り、副業の可否と案件条件の確認までを扱う。
 
 各スキルは単独でインストールでき、オープンな Agent Skills 仕様に従う。求職者本人が自分の Claude に入れて使うことを前提にしている。`employer` カテゴリは求人企業向けで、専任の採用担当者、現場のマネージャー、小規模企業の経営者のいずれからでも使える。立場ごとにカテゴリが分かれている。
 
-> **English** — A collection of Agent Skills for the Japanese job market: entry sheets (ES), rirekisho and shokumu-keirekisho review, interview preparation, company research, offer decisions, Otameshi Tenshoku trial planning for candidates, the employer side of a trial (work design, listing, budget case, applicant replies, gyomu-itaku terms, feedback), and side-work checks covering an employer's own rules and the terms of a gyomu-itaku assignment. Skill bodies, references, and report templates are written in Japanese; only the `SKILL.md` frontmatter is English so agents can discover them.
+> **English** — A collection of Agent Skills for the Japanese job market: entry sheets (ES), rirekisho and shokumu-keirekisho drafting and review, interview preparation, company research, offer decisions and negotiation, planning the first months at a new employer, Otameshi Tenshoku trial planning for candidates, the employer side of a trial (work design, listing, budget case, applicant replies, gyomu-itaku terms, feedback), and side-work checks covering an employer's own rules and the terms of a gyomu-itaku assignment. Skill bodies, references, and report templates are written in Japanese; only the `SKILL.md` frontmatter is English so agents can discover them.
 
 **Claude Codeで、応募書類・面接・求人票・おためし転職・採用側の募集・副業の相談を具体的な原稿や計画に。** 求人や経験のメモから必要なところに着手でき、特別な入力形式は不要です。
 
@@ -85,7 +85,7 @@ claude plugin install otame4-employer@otame4-work-skills
 - エントリーシート、履歴書、職務経歴書の作成と添削
 - 面接・面談の準備と振り返り
 - 業界・企業研究、求人票の読み解き
-- 内定・オファーの比較、条件確認、退職と入社の準備
+- 内定・オファーの比較、条件確認、条件交渉の準備、退職と入社の準備、入社後の最初の数か月の段取り
 - おためし転職の応募、見学・学習の無償体験と有償業務の準備、体験後の判断（求職者）
 - おためし転職の受け入れ：任せる仕事の設計、募集文、社内の予算説明、応募者への返信、業務委託の条件明示、振り返りとフィードバック（企業）
 - 副業の可否と申請・届出の確認、業務委託で受ける案件の取引条件と報酬の確認
@@ -101,6 +101,7 @@ claude plugin install otame4-employer@otame4-work-skills
 | Career | [`job-change-decision`](skills/career/job-change-decision/) | 「辞めたい」「このままでいいのか」という迷い、内定や引き留めを受けた後の迷い、周囲の反対から対話し、変えたいこと・守りたいことを整理する。期限は結論を迫る理由ではなく行動の順序を決める材料として扱い、条件付きの見立てと小さな次の行動、見直す時期まで考え、最終判断は本人に残す。 |
 | Career | [`career-options`](skills/career/career-options/) | 本人が実際にした作業から次の仕事の候補を作り、経験との接点・未確認の業務や要件・小さな試し方を示す。適職の診断や採用見込みの予測はしない。 |
 | Career | [`job-search-plan`](skills/career/job-search-plan/) | 在職しながら転職活動や情報収集を進める段取り。週に使える時間と活動の合計、平日日中の枠、経路ごとの開示範囲と取り決め、応募ごとの段階・次の行動・期限を1つの表に揃え、見直す日と止める条件を決める。応募先の推薦、求人の評価、合否の予測はしない。 |
+| Documents | [`resume-draft`](skills/documents/resume-draft/) | 棚卸しした経験から職務経歴書を1通組み立てる。形式を選び、求人の要件と載せる経験を対応させ、裏づけと役割に合った書き方で下書きを作る。対応する経験がない要件を言い換えで埋めず、通過の見込みは予測しない。 |
 | Documents | [`entry-sheet-review`](skills/documents/entry-sheet-review/) | ES・履歴書・職務経歴書を、設問適合・事実の裏づけ・文字数の3点に分けて確認し、利用者が選べる改稿案を出す。 |
 | Research | [`company-research`](skills/research/company-research/) | 応募先を一次情報・公式情報から調べ、すべての事実に出典と時点を付ける。口コミやまとめ記事は事実にせず、面接で確認する論点として残す。 |
 | Research | [`job-posting-analysis`](skills/research/job-posting-analysis/) | 求人票の提示年収から固定残業代を分離し、みなし残業込みの時給に換算する。要件の充足状況と、確認すべき曖昧な条件を出す。 |
@@ -109,8 +110,10 @@ claude plugin install otame4-employer@otame4-work-skills
 | Interview | [`interview-debrief`](skills/interview/interview-debrief/) | 終わった面接を、答えきれなかった質問の原因別（書類のずれ・順序の問題・準備漏れ）、未解決の逆質問、口頭のみの条件に整理する。手応えも合否も評価しない。 |
 | Offer | [`offer-terms-check`](skills/offer/offer-terms-check/) | 内定条件が書面で明示されているかを項目ごとに確認し、求人票・面接での説明との食い違いと、承諾期限までに確認すべきことを出す。 |
 | Offer | [`offer-comparison`](skills/offer/offer-comparison/) | 複数の内定を同じ基準に揃える。提示年収から固定残業代と保証のない賞与を分離し、変動しない年額とみなし残業込みの時給で並べる。順位も総合点も出さない。 |
+| Offer | [`offer-negotiation`](skills/offer/offer-negotiation/) | 承諾前に条件の変更を依頼する準備。依頼を項目・優先度・断られた場合の扱いに分け、根拠を書面・求人票・本人の記録に限って対応させ、差額と承諾期限までの日程を出して依頼文を下書きする。通る見込みも相場からの要求額も出さない。 |
 | Offer | [`offer-decline`](skills/offer/offer-decline/) | 受ける先が書面で確定しているかを確認したうえで、辞退の段階（選考途中・内定後・承諾後）と経路（エージェント・学校推薦・紹介）ごとに誰へ伝えるかを整理する。辞退の可否は判断しない。 |
 | Offer | [`resignation-plan`](skills/offer/resignation-plan/) | 退職の申出日・退職日・入社日を就業規則の定めと突き合わせ、有給の消化、引き継ぎ、書類の受け渡し、空白期間に発生する手続きを整理する。退職の可否は判断しない。 |
+| Offer | [`onboarding-plan`](skills/offer/onboarding-plan/) | 入社後の最初の数か月について、面接・内定・交渉で示された期待と約束を出典つきで並べ、口頭だけのものと測り方の決まっていないものを分け、試用期間の終わりと、誰と何をいつ確かめるかを決める。試用期間の評価や職場への適応は予測しない。 |
 | Trial | [`otameshi-candidate`](skills/trial/otameshi-candidate/) | 求職者向け。応募文、体験前の確認質問、学習体験・有償業務の計画、体験後の判断材料を作る。有償業務では実働・期間・予定額・換算時給を揃え、未経験でも企業の実務は有償枠を提案する。 |
 | Employer | [`trial-work-design`](skills/employer/trial-work-design/) | 企業向け。課題を、候補者が期間内に完結できる有償業務か未経験者向けの無償の見学・学習に変え、範囲・完了基準・実働・企業の工数・期間・報酬・変更条件を揃える。予定費用を予算と突き合わせ、企業の実務は経験にかかわらず有償枠にする。 |
 | Employer | [`trial-listing-draft`](skills/employer/trial-listing-draft/) | 企業向け。募集文を、候補者が応募を判断できる項目（作業、成果物、対象外、経験、支援、時間、場所、報酬、契約形態、支払時期）で点検し、範囲の閉じていない表現・無償の実務・採用の保証・職務と無関係な属性を直す。実働・期間・単価・予算が同時に成立するかを確かめ、内部検討用と掲載用の下書きを分ける。 |
@@ -212,7 +215,7 @@ otame4-work-skills/
 | `documents` | ES、履歴書、職務経歴書、ポートフォリオの作成と添削 |
 | `interview` | 面接・面談対策、想定質問、逆質問、振り返り |
 | `research` | 業界・企業研究、求人票の読み解き、応募先の選定 |
-| `offer` | 内定・オファー比較、条件確認、退職と入社準備 |
+| `offer` | 内定・オファー比較、条件確認、条件交渉の準備、退職と入社準備、入社後の段取り |
 | `trial` | 求職者のおためし転職。応募、条件調整、無償体験と有償業務の準備、体験後の判断 |
 | `employer` | 求人企業のおためし転職。業務設計、募集文、社内説明、応募者対応、業務委託の条件明示、振り返り |
 | `sidework` | 本業と並行する副業の可否・申請、業務委託案件の取引条件と報酬の確認 |

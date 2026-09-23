@@ -39,7 +39,8 @@
 
 この棚卸しがどこに繋がるかを書く。
 
-- 応募書類を書く・直す → `entry-sheet-review`
+- 職務経歴書を1通組み立てる → `resume-draft`
+- 応募書類の設問・文字数を見直す → `entry-sheet-review`
 - 面接で聞かれる箇所を洗い出す → `interview-prep`
 - 求人の要件と突き合わせる → `job-posting-analysis`
 

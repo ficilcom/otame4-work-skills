@@ -1,6 +1,6 @@
 ---
 name: entry-sheet-review
-description: Review and revise Japanese job-application documents (entry sheets, rirekisho, shokumu-keirekisho) by checking each answer against the question asked, the stated character limit, and the evidence the applicant can actually support, then propose concrete rewrites the applicant decides on. Use when a user wants an ES or resume answer critiqued, tightened, or drafted from their own experience; do not use to invent experience, to judge pass or fail probability, or to submit an application.
+description: Review and revise Japanese job-application documents (entry sheets, rirekisho, shokumu-keirekisho) by checking each answer against the question asked, the stated character limit, and the evidence the applicant can actually support, then propose concrete rewrites the applicant decides on. Use when a user wants an ES or resume answer critiqued, tightened, or drafted from their own experience; to assemble a whole shokumu-keirekisho from an experience inventory, use resume-draft instead; do not use to invent experience, to judge pass or fail probability, or to submit an application.
 license: MIT
 metadata:
   author: ficilcom
