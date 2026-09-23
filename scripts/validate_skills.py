@@ -8,18 +8,20 @@ import re
 import sys
 from pathlib import Path
 
+from _common_source import EMAIL_PATTERN, MYNUMBER_PATTERN, PHONE_PATTERN
 from _repo import (
     CATEGORIES,
     MARKETPLACE_FILE,
     README_FILE,
     ROOT,
+    SKILL_NAME_MAX_LENGTH,
     SKILLS_DIR,
     SKILLS_SH_FILE,
     VENDORED_COMMON_NAME,
+    is_valid_skill_name,
 )
 
 
-NAME_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 FIELD_PATTERN = re.compile(r"^([A-Za-z][A-Za-z0-9_-]*):(?:\s*(.*))?$")
 PLACEHOLDER_PATTERN = re.compile(r"\b(?:TODO|TBD|FIXME|PLACEHOLDER)\b", re.IGNORECASE)
 ALLOWED_LICENSES = {"MIT"}
@@ -48,13 +50,7 @@ ROUTING_TABLE_MIN_ROWS = 2
 BOUNDARY_PROMISE_PATTERN = re.compile(r"自動実行しない|本人が行う")
 
 # 実在する個人の応募書類をサンプルとして公開してしまう事故を止めるための最低限の検査。
-# 数字の並びは \b ではなく前後の数字だけを見て区切る。このリポジトリの本文は日本語で、
-# 「電話は03-1234-5678です」のように地の文へ直接続くと、\b は日本語の文字も
-# 語構成文字として扱うため境界にならず、検出漏れになる。
-EMAIL_PATTERN = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-PHONE_PATTERN = re.compile(r"(?<!\d)0\d{1,4}-\d{1,4}-\d{3,4}(?!\d)")
-MYNUMBER_PATTERN = re.compile(r"(?<!\d)\d{4}[- ]?\d{4}[- ]?\d{4}(?!\d)")
-
+# 検出の規則はスキル同梱の検査と同じものを _common_source.py から読む。
 TEXT_SUFFIXES = {".md", ".json", ".txt", ".yaml", ".yml", ".csv"}
 
 
@@ -115,8 +111,10 @@ def validate_skill(path: Path) -> list[str]:
     description = fields.get("description", "")
     if not name:
         problems.append("frontmatter requires a non-empty name")
-    elif len(name) > 64 or not NAME_PATTERN.fullmatch(name):
-        problems.append("name must be <=64 characters of lowercase letters, digits, and hyphens")
+    elif not is_valid_skill_name(name):
+        problems.append(
+            f"name must be <={SKILL_NAME_MAX_LENGTH} characters of lowercase letters, digits, and hyphens"
+        )
     elif name != path.parent.name:
         problems.append(f"name {name!r} must match parent directory {path.parent.name!r}")
 
