@@ -15,11 +15,13 @@ from typing import Any
 from _common import (
     flag_collector,
     optional_bool,
+    optional_choice,
     optional_int,
     optional_number,
     optional_text,
     require_list,
     require_object,
+    round_hours,
     run_cli,
 )
 
@@ -110,30 +112,14 @@ APPLICATION_CODES = {code for code, _ in APPLICATION_FACTS}
 DEFAULT_REFERENCE_WEEKLY_HOURS = Decimal(40)
 WEEKS_PER_MONTH = Decimal(52) / Decimal(12)
 DAYS_PER_WEEK = 7
-HOUR = Decimal("0.01")
-
-
-def as_hours(value: Decimal | None) -> float | None:
-    """時間を0.01単位に丸めて返す。None は None のままにする。"""
-    if value is None:
-        return None
-    return float(value.quantize(HOUR))
-
-
-def parse_choice(value: object, path: str, allowed: tuple[str, ...], default: str) -> str:
-    if value is None:
-        return default
-    if value not in allowed:
-        raise ValueError(f"{path} must be one of {list(allowed)}")
-    return str(value)
 
 
 def parse_rules(raw: object) -> dict[str, Any]:
     block = require_object(raw if raw is not None else {}, "rules")
     return {
-        "source": parse_choice(block.get("source"), "rules.source", RULE_SOURCES, "unknown"),
+        "source": optional_choice(block.get("source"), "rules.source", RULE_SOURCES, "unknown"),
         "reviewed": optional_bool(block.get("reviewed"), "rules.reviewed"),
-        "regime": parse_choice(block.get("regime"), "rules.regime", REGIMES, "unknown"),
+        "regime": optional_choice(block.get("regime"), "rules.regime", REGIMES, "unknown"),
         "clause_quoted": optional_bool(block.get("clause_quoted"), "rules.clause_quoted"),
     }
 
@@ -144,7 +130,7 @@ def parse_sidework(raw: object) -> dict[str, str]:
     if unknown_keys:
         raise ValueError(f"sidework has unknown keys: {unknown_keys}")
     return {
-        key: parse_choice(block.get(key), f"sidework.{key}", TOUCH_VALUES, "unknown")
+        key: optional_choice(block.get(key), f"sidework.{key}", TOUCH_VALUES, "unknown")
         for key in TOUCHPOINT_KEYS
     }
 
@@ -191,7 +177,7 @@ def parse_items(raw: object) -> dict[str, dict[str, Any]]:
         if source is not None and source not in RULE_SOURCES:
             raise ValueError(f"{path}.source must be one of {list(RULE_SOURCES)}")
         parsed[str(code)] = {
-            "status": parse_choice(item.get("status"), f"{path}.status", ITEM_STATUSES, "unknown"),
+            "status": optional_choice(item.get("status"), f"{path}.status", ITEM_STATUSES, "unknown"),
             "source": source,
             "note": optional_text(item.get("note"), f"{path}.note"),
         }
@@ -209,7 +195,7 @@ def parse_application(raw: object) -> dict[str, str]:
             raise ValueError(f"{path}.code is not a known application code: {code!r}")
         if code in parsed:
             raise ValueError(f"{path}.code is duplicated: {code!r}")
-        parsed[str(code)] = parse_choice(
+        parsed[str(code)] = optional_choice(
             item.get("status"), f"{path}.status", APPLICATION_STATUSES, "missing"
         )
     return parsed
@@ -279,17 +265,17 @@ def build_hours(hours: dict[str, Any], engagement: str) -> dict[str, Any]:
         over_health_reference = over_monthly > health_reference
 
     return {
-        "main_scheduled_weekly": as_hours(main),
-        "main_overtime_weekly": as_hours(overtime),
-        "sidework_weekly": as_hours(side),
+        "main_scheduled_weekly": round_hours(main),
+        "main_overtime_weekly": round_hours(overtime),
+        "sidework_weekly": round_hours(side),
         "missing_inputs": missing,
-        "total_weekly": as_hours(total),
-        "scheduled_total_weekly": as_hours(scheduled_total),
-        "reference_weekly_hours": as_hours(reference),
+        "total_weekly": round_hours(total),
+        "scheduled_total_weekly": round_hours(scheduled_total),
+        "reference_weekly_hours": round_hours(reference),
         "reference_supplied": hours["reference_supplied"],
-        "over_reference_weekly": as_hours(over_weekly),
-        "over_reference_monthly": as_hours(over_monthly),
-        "health_reference_monthly_hours": as_hours(health_reference),
+        "over_reference_weekly": round_hours(over_weekly),
+        "over_reference_monthly": round_hours(over_monthly),
+        "health_reference_monthly_hours": round_hours(health_reference),
         "over_health_reference": over_health_reference,
         "rest_days_per_week": hours["rest_days_per_week"],
         "aggregation_applies_to_engagement": engagement in ("employment", "unknown"),
@@ -463,8 +449,8 @@ def collect_flags(
 
 def check(payload: object) -> dict[str, Any]:
     data = require_object(payload, "input")
-    status = parse_choice(data.get("status"), "status", STATUSES, "unknown")
-    engagement = parse_choice(data.get("engagement"), "engagement", ENGAGEMENTS, "unknown")
+    status = optional_choice(data.get("status"), "status", STATUSES, "unknown")
+    engagement = optional_choice(data.get("engagement"), "engagement", ENGAGEMENTS, "unknown")
     rules = parse_rules(data.get("rules"))
     sidework = parse_sidework(data.get("sidework"))
     hours_input = parse_hours(data.get("hours"))

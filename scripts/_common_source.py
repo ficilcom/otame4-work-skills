@@ -31,9 +31,10 @@ from typing import Any, Callable
 MONTH_PATTERN = re.compile(r"^(\d{4})-(\d{2})$")
 WHITESPACE_RUN_PATTERN = re.compile(r"\s+")
 YEN = Decimal("1")
+HOUR = Decimal("0.01")
 
-# 本文に混ざった個人情報を見つけるための検査。scripts/validate_skills.py の
-# リポジトリ側ガードと同じ規則を使う。
+# 本文に混ざった個人情報を見つけるための検査。scripts/validate_skills.py も
+# リポジトリ側のガードとしてこの定義を import して使う。
 # 数字の並びは \b ではなく前後の数字だけを見て区切る。このリポジトリが扱う本文は
 # 日本語で、「電話は03-1234-5678です」のように地の文へ直接続くと、\b は日本語の
 # 文字も語構成文字として扱うため境界にならず、検出漏れになる。
@@ -78,6 +79,15 @@ def require_raw_text(value: object, path: str) -> str:
 
 def optional_text(value: object, path: str) -> str | None:
     return None if value is None else require_text(value, path)
+
+
+def optional_choice(value: object, path: str, allowed: tuple[str, ...], default: str) -> str:
+    """決められた選択肢の1つを返す。未指定と null は `default` として扱う。"""
+    if value is None:
+        return default
+    if value not in allowed:
+        raise ValueError(f"{path} must be one of {list(allowed)}")
+    return str(value)
 
 
 def optional_bool(value: object, path: str) -> bool | None:
@@ -173,6 +183,13 @@ def round_yen(value: Decimal | None) -> int | None:
     if value is None:
         return None
     return int(value.quantize(YEN, rounding=ROUND_HALF_UP))
+
+
+def round_hours(value: Decimal | None) -> float | None:
+    """時間を0.01時間単位に丸めて返す。None は None のままにする。"""
+    if value is None:
+        return None
+    return float(value.quantize(HOUR))
 
 
 def strip_whitespace(text: str) -> str:

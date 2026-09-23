@@ -16,6 +16,7 @@ from typing import Any
 from _common import (
     flag_collector,
     optional_bool,
+    optional_choice,
     optional_date,
     optional_number,
     optional_positive_int,
@@ -23,6 +24,7 @@ from _common import (
     require_list,
     require_object,
     require_text,
+    round_hours,
     round_yen,
     run_cli,
 )
@@ -81,27 +83,10 @@ CHECKLIST: tuple[tuple[str, str, str, bool, bool], ...] = (
 )
 CHECKLIST_CODES = {code for code, _, _, _, _ in CHECKLIST}
 
-HOUR = Decimal("0.01")
-
-
-def as_hours(value: Decimal | None) -> float | None:
-    """時間を0.01単位に丸めて返す。None は None のままにする。"""
-    if value is None:
-        return None
-    return float(value.quantize(HOUR))
-
-
-def parse_choice(value: object, path: str, allowed: tuple[str, ...], default: str) -> str:
-    if value is None:
-        return default
-    if value not in allowed:
-        raise ValueError(f"{path} must be one of {list(allowed)}")
-    return str(value)
-
 
 def parse_offer(raw: object) -> dict[str, Any]:
     block = require_object(raw if raw is not None else {}, "offer")
-    form = parse_choice(block.get("form"), "offer.form", OFFER_FORMS, "unknown")
+    form = optional_choice(block.get("form"), "offer.form", OFFER_FORMS, "unknown")
     return {
         "form": form,
         "in_writing": form in WRITTEN_SOURCES,
@@ -124,7 +109,7 @@ def parse_items(raw: object) -> dict[str, dict[str, Any]]:
         if source is not None and source not in TERM_SOURCES:
             raise ValueError(f"{path}.source must be one of {list(TERM_SOURCES)}")
         parsed[str(code)] = {
-            "status": parse_choice(item.get("status"), f"{path}.status", ITEM_STATUSES, "unknown"),
+            "status": optional_choice(item.get("status"), f"{path}.status", ITEM_STATUSES, "unknown"),
             "source": source,
             "applicable": optional_bool(item.get("applicable"), f"{path}.applicable"),
             "note": optional_text(item.get("note"), f"{path}.note"),
@@ -159,7 +144,7 @@ def parse_work(raw: object) -> list[dict[str, Any]]:
 def parse_compensation(raw: object) -> dict[str, Any]:
     block = require_object(raw if raw is not None else {}, "compensation")
     return {
-        "basis": parse_choice(
+        "basis": optional_choice(
             block.get("basis"), "compensation.basis", COMPENSATION_BASIS, "unknown"
         ),
         "fixed_amount": optional_number(
@@ -176,7 +161,7 @@ def parse_compensation(raw: object) -> dict[str, Any]:
             block.get("expenses_borne_by_worker"), "compensation.expenses_borne_by_worker"
         ),
         "withholding": optional_bool(block.get("withholding"), "compensation.withholding"),
-        "consumption_tax": parse_choice(
+        "consumption_tax": optional_choice(
             block.get("consumption_tax"),
             "compensation.consumption_tax",
             TAX_TREATMENTS,
@@ -259,12 +244,12 @@ def build_hours(tasks: list[dict[str, Any]]) -> dict[str, Any]:
     paid_low, paid_high = sum_hours([task for task in tasks if task["paid"] is True])
     unpaid_low, unpaid_high = sum_hours([task for task in tasks if task["paid"] is False])
     return {
-        "total_min": as_hours(total_low),
-        "total_max": as_hours(total_high),
-        "paid_min": as_hours(paid_low),
-        "paid_max": as_hours(paid_high),
-        "unpaid_min": as_hours(unpaid_low),
-        "unpaid_max": as_hours(unpaid_high),
+        "total_min": round_hours(total_low),
+        "total_max": round_hours(total_high),
+        "paid_min": round_hours(paid_low),
+        "paid_max": round_hours(paid_high),
+        "unpaid_min": round_hours(unpaid_low),
+        "unpaid_max": round_hours(unpaid_high),
         "unestimated": [task["label"] for task in tasks if task["hours"] is None],
         "payment_status_unknown": [
             task["label"] for task in tasks if task["paid"] is None and task["hours"] is not None
@@ -384,10 +369,10 @@ def build_schedule(availability: dict[str, Any], hours: dict[str, Any]) -> dict[
         fits = weekly_high <= available
 
     return {
-        "weeks": as_hours(weeks),
-        "weekly_available_hours": as_hours(available),
-        "weekly_needed_min": as_hours(weekly_low),
-        "weekly_needed_max": as_hours(weekly_high),
+        "weeks": round_hours(weeks),
+        "weekly_available_hours": round_hours(available),
+        "weekly_needed_min": round_hours(weekly_low),
+        "weekly_needed_max": round_hours(weekly_high),
         "fits_weekly_availability": fits,
     }
 
@@ -546,7 +531,7 @@ def collect_flags(
 
 def check(payload: object) -> dict[str, Any]:
     data = require_object(payload, "input")
-    engagement = parse_choice(data.get("engagement"), "engagement", ENGAGEMENTS, "unknown")
+    engagement = optional_choice(data.get("engagement"), "engagement", ENGAGEMENTS, "unknown")
     offer = parse_offer(data.get("offer"))
     items = parse_items(data.get("items"))
     tasks = parse_work(data.get("work"))
@@ -580,7 +565,7 @@ def check(payload: object) -> dict[str, Any]:
         "money": money,
         "payment": payment,
         "schedule": schedule,
-        "revisions": {"rounds": revisions["rounds"], "hours": as_hours(revisions["hours"])},
+        "revisions": {"rounds": revisions["rounds"], "hours": round_hours(revisions["hours"])},
         "summary": {
             "items_in_scope": len(in_scope),
             "items_in_writing": sum(

@@ -15,6 +15,7 @@ from typing import Any
 from _common import (
     flag_collector,
     optional_bool,
+    optional_choice,
     optional_number,
     optional_positive_int,
     optional_text,
@@ -36,14 +37,6 @@ COMPENSATION_BASIS = ("hourly", "fixed", "none", "unknown")
 NEXT_STEPS = ("continue", "hire_offer", "more_checks", "close", "undecided")
 
 
-def parse_choice(value: object, path: str, allowed: tuple[str, ...], default: str) -> str:
-    if value is None:
-        return default
-    if value not in allowed:
-        raise ValueError(f"{path} must be one of {list(allowed)}")
-    return str(value)
-
-
 def parse_expectations(raw: object) -> list[dict[str, Any]]:
     entries = require_list(raw if raw is not None else [], "expectations")
     parsed = []
@@ -62,7 +55,7 @@ def parse_expectations(raw: object) -> list[dict[str, Any]]:
                 "label": require_text(item.get("label"), f"{path}.label"),
                 # 未記載は「事前に合意していない」として扱う。後から足した期待を事前の基準に混ぜない。
                 "agreed_before_start": bool(agreed),
-                "result": parse_choice(item.get("result"), f"{path}.result", EXPECTATION_RESULTS, "unverified"),
+                "result": optional_choice(item.get("result"), f"{path}.result", EXPECTATION_RESULTS, "unverified"),
                 "note": optional_text(item.get("note"), f"{path}.note"),
             }
         )
@@ -83,7 +76,7 @@ def parse_observations(raw: object, expectation_codes: set[str]) -> list[dict[st
             {
                 "fact": require_text(item.get("fact"), f"{path}.fact"),
                 "expectation": expectation,
-                "source": parse_choice(item.get("source"), f"{path}.source", OBSERVATION_SOURCES, "unknown"),
+                "source": optional_choice(item.get("source"), f"{path}.source", OBSERVATION_SOURCES, "unknown"),
                 "observer": optional_text(item.get("observer"), f"{path}.observer"),
                 # 未記載は職務に関係する観察として扱う。属性や私生活に触れるものは入力側で false にする。
                 "job_related": True if job_related is None else job_related,
@@ -101,7 +94,7 @@ def parse_support(raw: object) -> list[dict[str, Any]]:
         parsed.append(
             {
                 "item": require_text(item.get("item"), f"{path}.item"),
-                "status": parse_choice(item.get("status"), f"{path}.status", SUPPORT_STATUSES, "unknown"),
+                "status": optional_choice(item.get("status"), f"{path}.status", SUPPORT_STATUSES, "unknown"),
                 "delay_days": optional_positive_int(item.get("delay_days"), f"{path}.delay_days"),
                 "affected": [
                     require_text(code, f"{path}.affected[{position}]")
@@ -115,7 +108,7 @@ def parse_support(raw: object) -> list[dict[str, Any]]:
 def parse_settlement(raw: object) -> dict[str, Any]:
     block = require_object(raw if raw is not None else {}, "settlement")
     return {
-        "basis": parse_choice(block.get("basis"), "settlement.basis", COMPENSATION_BASIS, "unknown"),
+        "basis": optional_choice(block.get("basis"), "settlement.basis", COMPENSATION_BASIS, "unknown"),
         "hourly_rate": optional_number(block.get("hourly_rate"), "settlement.hourly_rate", allow_zero=False),
         "fixed_amount": optional_number(block.get("fixed_amount"), "settlement.fixed_amount", allow_zero=False),
         "hours_worked": optional_number(block.get("hours_worked"), "settlement.hours_worked"),
@@ -150,7 +143,7 @@ def parse_feedback(raw: object) -> dict[str, Any]:
         if item not in allowed:
             raise ValueError(f"feedback.includes[{index}] must be one of {list(allowed)}")
     return {
-        "next_step": parse_choice(block.get("next_step"), "feedback.next_step", NEXT_STEPS, "undecided"),
+        "next_step": optional_choice(block.get("next_step"), "feedback.next_step", NEXT_STEPS, "undecided"),
         "next_step_decided": optional_bool(block.get("next_step_decided"), "feedback.next_step_decided"),
         "includes": [str(item) for item in includes],
     }
@@ -313,7 +306,7 @@ def decide_readiness(flags: list[dict[str, Any]]) -> dict[str, Any]:
 def review(payload: object) -> dict[str, Any]:
     data = require_object(payload, "input")
     trial = require_object(data.get("trial", {}) or {}, "trial")
-    kind = parse_choice(trial.get("kind"), "trial.kind", TRIAL_KINDS, "unknown")
+    kind = optional_choice(trial.get("kind"), "trial.kind", TRIAL_KINDS, "unknown")
 
     expectations = parse_expectations(data.get("expectations"))
     codes = {item["code"] for item in expectations}

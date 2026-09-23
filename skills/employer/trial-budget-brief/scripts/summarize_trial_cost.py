@@ -14,11 +14,13 @@ from typing import Any
 from _common import (
     flag_collector,
     optional_bool,
+    optional_choice,
     optional_number,
     optional_text,
     require_list,
     require_object,
     require_text,
+    round_hours,
     round_yen,
     run_cli,
 )
@@ -30,22 +32,6 @@ PAY_BASIS = ("hourly", "fixed", "none", "unknown")
 AMOUNT_SOURCES = ("official", "quote", "estimate", "unknown")
 CONFIRMED_SOURCES = ("official", "quote")
 
-HOUR = Decimal("0.01")
-
-
-def as_hours(value: Decimal | None) -> float | None:
-    if value is None:
-        return None
-    return float(value.quantize(HOUR))
-
-
-def parse_choice(value: object, path: str, allowed: tuple[str, ...], default: str) -> str:
-    if value is None:
-        return default
-    if value not in allowed:
-        raise ValueError(f"{path} must be one of {list(allowed)}")
-    return str(value)
-
 
 def parse_candidate_pay(raw: object) -> dict[str, Any]:
     block = require_object(raw if raw is not None else {}, "candidate_pay")
@@ -56,7 +42,7 @@ def parse_candidate_pay(raw: object) -> dict[str, Any]:
     if high is not None and high < low:
         raise ValueError("candidate_pay.hours_max must not be below candidate_pay.hours")
     return {
-        "basis": parse_choice(block.get("basis"), "candidate_pay.basis", PAY_BASIS, "unknown"),
+        "basis": optional_choice(block.get("basis"), "candidate_pay.basis", PAY_BASIS, "unknown"),
         "hourly_rate": optional_number(block.get("hourly_rate"), "candidate_pay.hourly_rate", allow_zero=False),
         "fixed_amount": optional_number(block.get("fixed_amount"), "candidate_pay.fixed_amount", allow_zero=False),
         "hours": low,
@@ -92,7 +78,7 @@ def parse_other_costs(raw: object) -> list[dict[str, Any]]:
             {
                 "label": require_text(item.get("label"), f"{path}.label"),
                 "amount": optional_number(item.get("amount"), f"{path}.amount"),
-                "source": parse_choice(item.get("source"), f"{path}.source", AMOUNT_SOURCES, "unknown"),
+                "source": optional_choice(item.get("source"), f"{path}.source", AMOUNT_SOURCES, "unknown"),
                 "note": optional_text(item.get("note"), f"{path}.note"),
             }
         )
@@ -122,7 +108,7 @@ def parse_alternatives(raw: object) -> list[dict[str, Any]]:
             {
                 "label": require_text(item.get("label"), f"{path}.label"),
                 "amount": optional_number(item.get("amount"), f"{path}.amount"),
-                "source": parse_choice(item.get("source"), f"{path}.source", AMOUNT_SOURCES, "unknown"),
+                "source": optional_choice(item.get("source"), f"{path}.source", AMOUNT_SOURCES, "unknown"),
             }
         )
     return parsed
@@ -140,8 +126,8 @@ def build_candidate_pay(pay: dict[str, Any]) -> dict[str, Any]:
         low = high = Decimal(0)
     return {
         "basis": pay["basis"],
-        "hours_min": as_hours(pay["hours"]),
-        "hours_max": as_hours(hours_high),
+        "hours_min": round_hours(pay["hours"]),
+        "hours_max": round_hours(hours_high),
         "pay_min": round_yen(low),
         "pay_max": round_yen(high),
         "expenses": round_yen(pay["expenses"]),
@@ -158,11 +144,11 @@ def build_company_hours(entries: list[dict[str, Any]]) -> dict[str, Any]:
     if known and len(known) == len(entries) and all(entry["hourly_cost"] is not None for entry in known):
         costed = sum((entry["hours"] * entry["hourly_cost"] for entry in known), Decimal(0))
     return {
-        "total_hours": as_hours(total),
+        "total_hours": round_hours(total),
         "by_role": [
             {
                 "role": entry["role"],
-                "hours": as_hours(entry["hours"]),
+                "hours": round_hours(entry["hours"]),
                 "hourly_cost": round_yen(entry["hourly_cost"]),
                 "cost": round_yen(entry["hours"] * entry["hourly_cost"])
                 if entry["hours"] is not None and entry["hourly_cost"] is not None
@@ -328,7 +314,7 @@ def collect_flags(
 def summarize(payload: object) -> dict[str, Any]:
     data = require_object(payload, "input")
     trial = require_object(data.get("trial", {}) or {}, "trial")
-    kind = parse_choice(trial.get("kind"), "trial.kind", TRIAL_KINDS, "unknown")
+    kind = optional_choice(trial.get("kind"), "trial.kind", TRIAL_KINDS, "unknown")
 
     candidate = build_candidate_pay(parse_candidate_pay(data.get("candidate_pay")))
     company = build_company_hours(parse_company_hours(data.get("company_hours")))

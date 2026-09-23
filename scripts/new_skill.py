@@ -4,12 +4,9 @@
 from __future__ import annotations
 
 import argparse
-import re
 
-from _repo import CATEGORIES, ROOT
+from _repo import CATEGORIES, ROOT, SKILL_NAME_MAX_LENGTH, is_valid_skill_name
 
-
-NAME_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 TEMPLATE = """---
 name: {name}
@@ -51,9 +48,9 @@ def main() -> int:
     args = parser.parse_args()
     name = args.name
 
-    if len(name) > 64 or not NAME_PATTERN.fullmatch(name):
+    if not is_valid_skill_name(name):
         parser.error(
-            "name must be at most 64 characters and contain only lowercase "
+            f"name must be at most {SKILL_NAME_MAX_LENGTH} characters and contain only lowercase "
             "letters, digits, and single hyphens"
         )
 

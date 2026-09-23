@@ -13,6 +13,7 @@ from typing import Any
 
 from _common import (
     flag_collector,
+    optional_choice,
     optional_number,
     require_list,
     require_object,
@@ -36,9 +37,7 @@ WIDE_RANGE_RATIO = Decimal("1.5")
 def parse_compensation(raw: object) -> dict[str, Any]:
     compensation = require_object(raw, "compensation")
 
-    basis = compensation.get("basis", "unknown")
-    if basis not in PAY_BASIS:
-        raise ValueError(f"compensation.basis must be one of {list(PAY_BASIS)}")
+    basis = optional_choice(compensation.get("basis"), "compensation.basis", PAY_BASIS, "unknown")
 
     annual_min = optional_number(compensation.get("annual_min"), "compensation.annual_min", allow_zero=False)
     annual_max = optional_number(compensation.get("annual_max"), "compensation.annual_max", allow_zero=False)
@@ -79,9 +78,7 @@ def parse_working_hours(raw: object) -> dict[str, Any]:
     if raw is None:
         return {"system": "unknown", "monthly_scheduled_hours": None}
     hours = require_object(raw, "working_hours")
-    system = hours.get("system", "unknown")
-    if system not in WORKING_TIME_SYSTEMS:
-        raise ValueError(f"working_hours.system must be one of {list(WORKING_TIME_SYSTEMS)}")
+    system = optional_choice(hours.get("system"), "working_hours.system", WORKING_TIME_SYSTEMS, "unknown")
 
     monthly = optional_number(hours.get("monthly_scheduled_hours"), "working_hours.monthly_scheduled_hours", allow_zero=False)
     if monthly is None:
@@ -97,12 +94,10 @@ def parse_requirements(raw: object) -> list[dict[str, Any]]:
     parsed = []
     for index, entry in enumerate(entries):
         item = require_object(entry, f"requirements[{index}]")
-        kind = item.get("kind", "must")
-        if kind not in REQUIREMENT_KINDS:
-            raise ValueError(f"requirements[{index}].kind must be one of {list(REQUIREMENT_KINDS)}")
-        status = item.get("user_status", "unknown")
-        if status not in USER_STATUSES:
-            raise ValueError(f"requirements[{index}].user_status must be one of {list(USER_STATUSES)}")
+        kind = optional_choice(item.get("kind"), f"requirements[{index}].kind", REQUIREMENT_KINDS, "must")
+        status = optional_choice(
+            item.get("user_status"), f"requirements[{index}].user_status", USER_STATUSES, "unknown"
+        )
         parsed.append(
             {
                 "text": require_text(item.get("text"), f"requirements[{index}].text"),

@@ -15,6 +15,7 @@ from typing import Any
 from _common import (
     flag_collector,
     optional_bool,
+    optional_choice,
     optional_number,
     optional_text,
     require_list,
@@ -46,14 +47,6 @@ REPLY_CONTENTS = (
 PRESENTATIONS = ("proposal", "agreed", "unknown")
 # 確認していない、または一部しか示されていない要件を「開いている」と呼ぶ。
 OPEN_STATUSES = ("partial", "unknown")
-
-
-def parse_choice(value: object, path: str, allowed: tuple[str, ...], default: str) -> str:
-    if value is None:
-        return default
-    if value not in allowed:
-        raise ValueError(f"{path} must be one of {list(allowed)}")
-    return str(value)
 
 
 def parse_requirements(raw: object) -> list[dict[str, Any]]:
@@ -96,8 +89,8 @@ def parse_evidence(raw: object, codes: set[str]) -> dict[str, dict[str, Any]]:
         if code in parsed:
             raise ValueError(f"{path}.requirement is duplicated: {code!r}")
         parsed[code] = {
-            "status": parse_choice(item.get("status"), f"{path}.status", EVIDENCE_STATUSES, "unknown"),
-            "source": parse_choice(item.get("source"), f"{path}.source", EVIDENCE_SOURCES, "unknown"),
+            "status": optional_choice(item.get("status"), f"{path}.status", EVIDENCE_STATUSES, "unknown"),
+            "source": optional_choice(item.get("source"), f"{path}.source", EVIDENCE_SOURCES, "unknown"),
             "note": optional_text(item.get("note"), f"{path}.note"),
         }
     return parsed
@@ -110,7 +103,7 @@ def parse_reply(raw: object) -> dict[str, Any]:
         if item not in REPLY_CONTENTS:
             raise ValueError(f"reply.includes[{index}] must be one of {list(REPLY_CONTENTS)}")
     return {
-        "purpose": parse_choice(block.get("purpose"), "reply.purpose", REPLY_PURPOSES, "unknown"),
+        "purpose": optional_choice(block.get("purpose"), "reply.purpose", REPLY_PURPOSES, "unknown"),
         "includes": [str(item) for item in includes],
     }
 
@@ -139,7 +132,7 @@ def parse_proposals(raw: object) -> list[dict[str, Any]]:
             {
                 "topic": require_text(item.get("topic"), f"{path}.topic"),
                 "agreed": optional_bool(item.get("agreed"), f"{path}.agreed"),
-                "presented_as": parse_choice(
+                "presented_as": optional_choice(
                     item.get("presented_as"), f"{path}.presented_as", PRESENTATIONS, "unknown"
                 ),
             }

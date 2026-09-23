@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 
@@ -26,6 +27,14 @@ CATEGORIES: tuple[str, ...] = (
 )
 
 SKILLS_DIR = ROOT / "skills"
+
+# スキル名の規則。雛形の作成と検証の両方がここを読む。
+SKILL_NAME_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+SKILL_NAME_MAX_LENGTH = 64
+
+
+def is_valid_skill_name(name: str) -> bool:
+    return len(name) <= SKILL_NAME_MAX_LENGTH and SKILL_NAME_PATTERN.fullmatch(name) is not None
 
 # 各スキルへ配る共通モジュールのファイル名。スキル同梱のスクリプトを数えるとき、
 # この生成物は「そのスキルが持つスクリプト」に含めない。

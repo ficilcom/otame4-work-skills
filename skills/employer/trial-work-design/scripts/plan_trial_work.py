@@ -14,6 +14,7 @@ from typing import Any
 from _common import (
     flag_collector,
     optional_bool,
+    optional_choice,
     optional_date,
     optional_number,
     optional_int,
@@ -21,6 +22,7 @@ from _common import (
     require_list,
     require_object,
     require_text,
+    round_hours,
     round_yen,
     run_cli,
 )
@@ -38,23 +40,13 @@ AGREEMENT_STATES = ("internal_draft", "offered", "candidate_request", "mutual", 
 INTERNAL_ONLY = ("internal_draft", "unconfirmed")
 
 DAYS_PER_WEEK = Decimal(7)
-HOUR = Decimal("0.01")
-
-
-def as_hours(value: Decimal | None) -> float | None:
-    """時間を0.01単位に丸めて返す。None は None のままにする。"""
-    if value is None:
-        return None
-    return float(value.quantize(HOUR))
 
 
 def parse_task(raw: object, index: int) -> dict[str, Any]:
     path = f"tasks[{index}]"
     task = require_object(raw, path)
 
-    kind = task.get("kind", "unknown")
-    if kind not in TASK_KINDS:
-        raise ValueError(f"{path}.kind must be one of {list(TASK_KINDS)}")
+    kind = optional_choice(task.get("kind"), f"{path}.kind", TASK_KINDS, "unknown")
 
     low = optional_number(task.get("candidate_hours"), f"{path}.candidate_hours")
     high = optional_number(task.get("candidate_hours_max"), f"{path}.candidate_hours_max")
@@ -119,15 +111,13 @@ def parse_period(raw: object) -> dict[str, Any]:
         "end": end.isoformat() if end else None,
         "checkpoint": optional_text(block.get("checkpoint"), "plan.period.checkpoint"),
         "calendar_days": int(days) if days is not None else None,
-        "weeks": as_hours(weeks),
+        "weeks": round_hours(weeks),
     }
 
 
 def parse_compensation(raw: object) -> dict[str, Any]:
     block = require_object(raw or {}, "compensation")
-    basis = block.get("basis", "unknown")
-    if basis not in COMPENSATION_BASIS:
-        raise ValueError(f"compensation.basis must be one of {list(COMPENSATION_BASIS)}")
+    basis = optional_choice(block.get("basis"), "compensation.basis", COMPENSATION_BASIS, "unknown")
     return {
         "basis": basis,
         "hourly_rate": optional_number(block.get("hourly_rate"), "compensation.hourly_rate", allow_zero=False),
@@ -143,9 +133,9 @@ def parse_conditions(raw: object) -> list[dict[str, Any]]:
     for index, entry in enumerate(require_list(raw or [], "conditions")):
         path = f"conditions[{index}]"
         item = require_object(entry, path)
-        agreement = item.get("agreement", "unconfirmed")
-        if agreement not in AGREEMENT_STATES:
-            raise ValueError(f"{path}.agreement must be one of {list(AGREEMENT_STATES)}")
+        agreement = optional_choice(
+            item.get("agreement"), f"{path}.agreement", AGREEMENT_STATES, "unconfirmed"
+        )
         conditions.append(
             {
                 "topic": require_text(item.get("topic"), f"{path}.topic"),
@@ -352,23 +342,23 @@ def plan(payload: object) -> dict[str, Any]:
     undecided_low, _ = sum_hours([task for task in tasks if task["paid"] is None], "candidate_hours")
 
     workload = {
-        "candidate_hours_min": as_hours(low),
-        "candidate_hours_max": as_hours(high),
+        "candidate_hours_min": round_hours(low),
+        "candidate_hours_max": round_hours(high),
         "candidate_hours_missing": missing,
-        "paid_hours_min": as_hours(paid_low),
-        "paid_hours_max": as_hours(paid_high),
-        "unpaid_hours": as_hours(unpaid_low),
-        "pay_status_unknown_hours": as_hours(undecided_low),
+        "paid_hours_min": round_hours(paid_low),
+        "paid_hours_max": round_hours(paid_high),
+        "unpaid_hours": round_hours(unpaid_low),
+        "pay_status_unknown_hours": round_hours(undecided_low),
         # 企業担当者の工数は、候補者の実働とは別の数字として持つ。合計しない。
-        "company_hours_total": as_hours(company_low),
+        "company_hours_total": round_hours(company_low),
         "tasks": [
             {
                 "label": task["label"],
                 "kind": task["kind"],
                 "paid": task["paid"],
-                "candidate_hours": as_hours(task["candidate_hours"]),
-                "candidate_hours_max": as_hours(task["candidate_hours_max"]),
-                "company_hours": as_hours(task["company_hours"]),
+                "candidate_hours": round_hours(task["candidate_hours"]),
+                "candidate_hours_max": round_hours(task["candidate_hours_max"]),
+                "company_hours": round_hours(task["company_hours"]),
             }
             for task in tasks
         ],
@@ -397,9 +387,9 @@ def plan(payload: object) -> dict[str, Any]:
     )
     schedule = {
         **period,
-        "candidate_weekly_hours": as_hours(available),
-        "required_weekly_hours_min": as_hours(weekly_low),
-        "required_weekly_hours_max": as_hours(weekly_high),
+        "candidate_weekly_hours": round_hours(available),
+        "required_weekly_hours_min": round_hours(weekly_low),
+        "required_weekly_hours_max": round_hours(weekly_high),
         "fits_candidate_availability": fits,
     }
 
@@ -440,7 +430,7 @@ def plan(payload: object) -> dict[str, Any]:
         "schedule": schedule,
         "cost": cost,
         "budget": budget,
-        "revisions": {"rounds": revisions["rounds"], "hours": as_hours(revisions["hours"])},
+        "revisions": {"rounds": revisions["rounds"], "hours": round_hours(revisions["hours"])},
         "conditions": conditions,
         "not_offered_yet": [item["topic"] for item in conditions if item["agreement"] in INTERNAL_ONLY],
         "flags": collect_flags(tasks, workload, schedule, cost, budget, revisions, conditions),

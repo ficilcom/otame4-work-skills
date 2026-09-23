@@ -14,6 +14,7 @@ from typing import Any
 from _common import (
     flag_collector,
     optional_bool,
+    optional_choice,
     optional_date,
     optional_int,
     require_list,
@@ -71,12 +72,12 @@ def count_weekdays(start: date, end: date) -> int:
 
 def parse_current(raw: object) -> dict[str, Any]:
     current = require_object(raw if raw is not None else {}, "current")
-    contract_type = current.get("contract_type", "unknown")
-    if contract_type not in CONTRACT_TYPES:
-        raise ValueError(f"current.contract_type must be one of {list(CONTRACT_TYPES)}")
-    rule_source = current.get("notice_rule_source", "unknown")
-    if rule_source not in RULE_SOURCES:
-        raise ValueError(f"current.notice_rule_source must be one of {list(RULE_SOURCES)}")
+    contract_type = optional_choice(
+        current.get("contract_type"), "current.contract_type", CONTRACT_TYPES, "unknown"
+    )
+    rule_source = optional_choice(
+        current.get("notice_rule_source"), "current.notice_rule_source", RULE_SOURCES, "unknown"
+    )
     return {
         "contract_type": contract_type,
         "notice_rule_source": rule_source,
@@ -115,9 +116,9 @@ def parse_items(raw: object) -> dict[str, dict[str, Any]]:
         if code in parsed:
             raise ValueError(f"items[{index}].code is duplicated: {code!r}")
         statuses = TASK_STATUSES if code in TASK_CODES else ITEM_STATUSES
-        status = item.get("status", "none" if code in TASK_CODES else "unknown")
-        if status not in statuses:
-            raise ValueError(f"items[{index}].status must be one of {list(statuses)}")
+        status = optional_choice(
+            item.get("status"), f"items[{index}].status", statuses, "none" if code in TASK_CODES else "unknown"
+        )
         note = item.get("note")
         if note is not None and not isinstance(note, str):
             raise ValueError(f"items[{index}].note must be a string or null")

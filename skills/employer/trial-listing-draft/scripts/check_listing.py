@@ -15,11 +15,13 @@ from typing import Any
 
 from _common import (
     flag_collector,
+    optional_choice,
     optional_number,
     optional_text,
     require_list,
     require_object,
     require_raw_text,
+    round_hours,
     round_yen,
     run_cli,
 )
@@ -118,30 +120,14 @@ TEXT_CHECKS: tuple[tuple[str, str, str, str, tuple[str, ...]], ...] = (
     ),
 )
 
-HOUR = Decimal("0.01")
-
-
-def as_hours(value: Decimal | None) -> float | None:
-    if value is None:
-        return None
-    return float(value.quantize(HOUR))
-
-
-def parse_choice(value: object, path: str, allowed: tuple[str, ...], default: str) -> str:
-    if value is None:
-        return default
-    if value not in allowed:
-        raise ValueError(f"{path} must be one of {list(allowed)}")
-    return str(value)
-
 
 def parse_listing(raw: object) -> dict[str, Any]:
     block = require_object(raw if raw is not None else {}, "listing")
     text = block.get("text")
     return {
-        "kind": parse_choice(block.get("kind"), "listing.kind", LISTING_KINDS, "unknown"),
-        "audience": parse_choice(block.get("audience"), "listing.audience", AUDIENCES, "unknown"),
-        "stage": parse_choice(block.get("stage"), "listing.stage", STAGES, "unknown"),
+        "kind": optional_choice(block.get("kind"), "listing.kind", LISTING_KINDS, "unknown"),
+        "audience": optional_choice(block.get("audience"), "listing.audience", AUDIENCES, "unknown"),
+        "stage": optional_choice(block.get("stage"), "listing.stage", STAGES, "unknown"),
         # 本文は原文のまま扱う。前後の空白も含めて掲載されるため strip しない。
         "text": None if text is None else require_raw_text(text, "listing.text"),
     }
@@ -159,7 +145,7 @@ def parse_items(raw: object) -> dict[str, dict[str, Any]]:
         if code in parsed:
             raise ValueError(f"{path}.code is duplicated: {code!r}")
         parsed[str(code)] = {
-            "status": parse_choice(item.get("status"), f"{path}.status", ITEM_STATUSES, "unknown"),
+            "status": optional_choice(item.get("status"), f"{path}.status", ITEM_STATUSES, "unknown"),
             "note": optional_text(item.get("note"), f"{path}.note"),
         }
     return parsed
@@ -181,7 +167,7 @@ def parse_plan(raw: object) -> dict[str, Any] | None:
         "candidate_hours_max": high,
         "weekly_hours": optional_number(block.get("weekly_hours"), "plan.weekly_hours", allow_zero=False),
         "period_weeks": optional_number(block.get("period_weeks"), "plan.period_weeks", allow_zero=False),
-        "basis": parse_choice(
+        "basis": optional_choice(
             compensation.get("basis"), "plan.compensation.basis", COMPENSATION_BASIS, "unknown"
         ),
         "hourly_rate": optional_number(
@@ -202,7 +188,7 @@ def parse_conditions(raw: object) -> list[dict[str, Any]]:
         conditions.append(
             {
                 "topic": require_raw_text(item.get("topic"), f"{path}.topic").strip(),
-                "agreement": parse_choice(
+                "agreement": optional_choice(
                     item.get("agreement"), f"{path}.agreement", AGREEMENT_STATES, "unconfirmed"
                 ),
             }
@@ -275,9 +261,9 @@ def build_numbers(plan: dict[str, Any] | None) -> dict[str, Any] | None:
         over = cost_high > budget
 
     return {
-        "candidate_hours_min": as_hours(low),
-        "candidate_hours_max": as_hours(high),
-        "period_capacity_hours": as_hours(capacity),
+        "candidate_hours_min": round_hours(low),
+        "candidate_hours_max": round_hours(high),
+        "period_capacity_hours": round_hours(capacity),
         "fits_period": fits_period,
         "basis": plan["basis"],
         "planned_cost_min": round_yen(cost_low),
