@@ -66,7 +66,8 @@ def parse_range(raw: object, path: str) -> dict[str, Any] | None:
     if low is not None and high is not None and low > high:
         raise ValueError(f"{path}.min must not exceed {path}.max")
     unit = optional_choice(posted.get("unit"), f"{path}.unit", AMOUNT_UNITS, "monthly")
-    return {"min": low, "max": high, "unit": unit}
+    components_match = optional_bool(posted.get("components_match"), f"{path}.components_match")
+    return {"min": low, "max": high, "unit": unit, "components_match": components_match}
 
 
 def parse_request(raw: object, index: int, seen: set[str]) -> dict[str, Any]:
@@ -86,7 +87,7 @@ def parse_request(raw: object, index: int, seen: set[str]) -> dict[str, Any]:
         "id": request_id,
         "topic": require_text(entry.get("topic"), f"{path}.topic"),
         "category": category,
-        "priority": optional_choice(entry.get("priority"), f"{path}.priority", PRIORITIES, "want"),
+        "priority": optional_choice(entry.get("priority"), f"{path}.priority", PRIORITIES, "unset"),
         "priority_given": entry.get("priority") is not None,
         "current_text": optional_text(entry.get("current_text"), f"{path}.current_text"),
         "ask_text": require_text(entry.get("ask_text"), f"{path}.ask_text"),
@@ -114,6 +115,8 @@ def range_position(ask: int, unit: str, posted: dict[str, Any] | None) -> str:
     """希望額が求人票の提示範囲のどこにあるか。単位が違えば比べない。"""
     if posted is None:
         return "no_range"
+    if posted["components_match"] is False:
+        return "components_mismatch"
     if posted["unit"] != unit:
         return "unit_mismatch"
     if posted["max"] is not None and ask > posted["max"]:
@@ -194,6 +197,7 @@ def build_schedule(
         "expected_answer_by": _iso(expected),
         "answer_before_deadline": answer_before_deadline,
         "days_left_after_answer": (deadline - expected).days if deadline and expected else None,
+        "deadline_on_weekend": deadline.weekday() >= 5 if deadline else None,
         "request_after_deadline": (
             request_date > deadline if request_date and deadline else None
         ),
@@ -217,10 +221,21 @@ def collect_flags(
     elif written_terms is None:
         add("written_terms_unknown", "条件を書面で受け取っているかが未確認。先に確かめる")
 
+    no_current = [item["id"] for item in requests if item["current_text"] is None]
+    if no_current:
+        add(
+            "current_term_unconfirmed",
+            "現在の提示が入っていない依頼がある。書面に何と書かれているか（記載がないのか）を先に確かめる",
+            no_current,
+        )
+
     if channel == "unknown":
         add("channel_unknown", "企業に直接伝えるか、エージェント経由かが決まっていない。宛先と書き方が変わる")
 
-    no_basis = [item["id"] for item in requests if not item["basis_kinds"]]
+    # 書面の記載は「何を変えてほしいか」を特定するもので、希望の根拠にはならない。
+    no_basis = [
+        item["id"] for item in requests if not set(item["basis_kinds"]) - {"written_offer"}
+    ]
     if no_basis:
         add(
             "request_without_basis",
@@ -266,6 +281,18 @@ def collect_flags(
             "ask_above_posted_range",
             "希望額が求人票の提示範囲の上限を超えている。事実として示すだけで、通るかどうかの判断ではない",
             above,
+        )
+
+    components = [
+        item["id"]
+        for item in requests
+        if item["amount"] and item["amount"]["posted_range_position"] == "components_mismatch"
+    ]
+    if components:
+        add(
+            "posted_range_components_mismatch",
+            "求人票の提示範囲と希望額で、含む要素（固定残業代など）が違うため比べていない。比べるなら同じ内訳に揃えた額を入れる",
+            components,
         )
 
     mismatch = [
@@ -331,6 +358,11 @@ def collect_flags(
 
     if schedule["days_to_deadline"] is not None and schedule["days_to_deadline"] < 0:
         add("deadline_passed", "承諾期限を過ぎている。期限の扱いを先に確かめる")
+    if schedule["deadline_on_weekend"]:
+        add(
+            "deadline_on_weekend",
+            "承諾期限が土日にあたる。先方の営業日で数えると実際の期限が前にずれることがあるので確かめる",
+        )
     if schedule["acceptance_deadline"] is None:
         add("deadline_unknown", "承諾期限が分かっていない。回答が間に合うかを判定できない")
     if schedule["request_date"] is None:
@@ -386,10 +418,12 @@ def plan(payload: object) -> dict[str, Any]:
         "requests": len(requests),
         "by_priority": {
             priority: [item["id"] for item in requests if item["priority"] == priority]
-            for priority in PRIORITIES
+            for priority in (*PRIORITIES, "unset")
         },
         "pay_annual_difference_total": sum(annual_differences) if annual_differences else None,
-        "without_basis": sum(1 for item in requests if not item["basis_kinds"]),
+        "without_basis": sum(
+            1 for item in requests if not set(item["basis_kinds"]) - {"written_offer"}
+        ),
     }
 
     return {

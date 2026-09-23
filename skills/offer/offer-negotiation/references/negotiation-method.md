@@ -22,7 +22,7 @@
 
 各項目に次の5つを置く。
 
-- **現在の提示** — 書面の原文。要約しない。書面がなければ出典を添える。
+- **現在の提示** — 書面の原文。要約しない。書面がなければ出典を添える。書面に記載がない項目は「記載なし」と書き、書面をまだ読み返していないなら先に確かめる。
 - **希望** — 何をどう変えてほしいか。金額・日付・日数で書けるものは数値で書く。
 - **優先度** — `must`（通らなければ承諾を考え直す）/ `want`（通ってほしい）/ `nice`（あれば嬉しい）。全部を `must` にすると、一部だけ通ったときに判断できない。
 - **断られた場合** — `accept_anyway`（それでも承諾する）/ `decline_offer`（辞退する）/ `undecided`。**利用者が決める。** 決まっていない `must` は、依頼を出す前に決めておくことを勧める。依頼文で強く出た後に、断られて承諾すると次の依頼が通りにくくなる。
@@ -32,8 +32,8 @@
 
 | kind | 何を指すか | 使い方 |
 | --- | --- | --- |
-| `written_offer` | 労働条件通知書、内定通知書の記載 | 提示内容の原文を示し、どこを変えてほしいかを特定する |
-| `posting` | 求人票・募集要項の記載（提示範囲など） | 募集時の提示範囲と、提示額の位置を示す。求人票は契約の条件ではない |
+| `written_offer` | 労働条件通知書、内定通知書の記載 | 提示内容の原文を示し、どこを変えてほしいかを特定する。**希望の根拠にはならない**ため、これだけの依頼は根拠なしとして数える |
+| `posting` | 求人票・募集要項の記載（提示範囲など） | 募集時の提示範囲と、提示額の位置を示す。求人票は契約の条件ではない。範囲が固定残業代や手当を含む額なら、基本給の希望とそのまま比べない |
 | `interview` | 面接・面談での説明 | いつ誰が何と言ったかを利用者の記録と照らす。記憶だけなら断定しない |
 | `own_record` | 現職の給与明細、源泉徴収票、実績の記録、資格の証明 | 事実のとおりに書く。現年収を実際より高く書かない |
 | `public_source` | 公的統計、企業の公開資料（有価証券報告書の平均給与など） | 出典と時点を必ず付ける。職種・地域の区切りが応募先と合っているかを確かめる |
@@ -92,11 +92,11 @@
       "current_amount": 280000,
       "ask_amount": 310000,
       "amount_unit": "monthly",
-      "posted_range": {"min": 260000, "max": 340000, "unit": "monthly"},
+      "posted_range": {"min": 260000, "max": 340000, "unit": "monthly", "components_match": true},
       "if_declined": "accept_anyway",
       "fallback": "入社6か月後の等級見直しを書面に入れてもらう",
       "bases": [
-        {"kind": "posting", "note": "求人票の月給26万〜34万円"},
+        {"kind": "posting", "note": "求人票の基本給26万〜34万円"},
         {"kind": "own_record", "note": "現職の基本給 月額300,000円（給与明細）"}
       ]
     },
@@ -118,9 +118,11 @@
 
 - `written_terms` は条件を書面（電子交付を含む）で受け取っているか。不明なら `null` にする。
 - `channel` は `direct` / `agent` / `unknown`。
-- `category` は上の表の値。`priority` は `must` / `want` / `nice`。省略すると `want` として数え、優先度が付いていないことを注記する。
+- `category` は上の表の値。`priority` は `must` / `want` / `nice`。利用者が決めていなければ省略する。省略した依頼は `unset` として数え、優先度が付いていないことを注記する。
 - `if_declined` は `accept_anyway` / `decline_offer` / `undecided`。利用者が決めていなければ省略する。こちらで推測して入れない。
 - 金額は `current_amount` と `ask_amount` を同じ単位（`amount_unit` が `monthly` か `annual`）で入れる。`posted_range` の単位が違う場合は比べない。
+- `posted_range.components_match` は、求人票の範囲と希望額が同じ内訳か。求人票が「固定残業代含む」月給で、希望が基本給だけなら `false` にする。比べたい場合は、希望額に固定残業代を足した額を別の依頼行にせず、手元で揃えた額を示す。
+- `current_text` は書面の原文。入れないと、現在の提示が確かめられていないものとして注記する。
 - 日付の依頼は `current_date` と `ask_date` を入れると、ずらす日数が出る。
 - `bases[].kind` は上の表の値。`public_source` には `as_of`（資料の時点）を入れる。
 - `plan.response_wait_days` は、依頼から回答までに見込む日数。分からなければ省略する。既定値で埋めない。
@@ -131,4 +133,4 @@
 python3 scripts/plan_negotiation.py input.json
 ```
 
-出力の `requests[].amount` は差額、年額換算、求人票の提示範囲での位置（`within` / `above_max` / `below_min` / `no_range` / `unit_mismatch`）。`schedule` は承諾期限と回答見込みの関係で、`answer_before_deadline` が `false` のときは回答が期限に間に合わない。`summary.pay_annual_difference_total` は金額の依頼がすべて通った場合の年額の差の合計で、見込みではない。
+出力の `requests[].amount` は差額、年額換算、求人票の提示範囲での位置（`within` / `above_max` / `below_min` / `no_range` / `unit_mismatch` / `components_mismatch`）。`schedule` は承諾期限と回答見込みの関係で、`answer_before_deadline` が `false` のときは回答が期限に間に合わない。`summary.pay_annual_difference_total` は金額の依頼がすべて通った場合の年額の差の合計で、見込みではない。

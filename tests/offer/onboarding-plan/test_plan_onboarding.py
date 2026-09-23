@@ -33,7 +33,12 @@ def payload(**overrides):
         "as_of": "2026-10-15",
         "start_date": "2026-11-01",
         "written_terms": True,
-        "probation": {"exists": True, "months": 3, "criteria_known": True, "conditions_differ": False},
+        "probation": {
+            "exists": True,
+            "months": 3,
+            "criteria_known": True,
+            "conditions_same": {"pay": True, "employment_type": True, "work_style": True},
+        },
         "expectations": [expectation()],
         "checkpoints": [
             {"label": "上長との初回面談", "date": "2026-11-02", "with": "manager", "topics": ["x1"]}
@@ -91,9 +96,11 @@ class ExpectationTest(unittest.TestCase):
         report = MODULE.plan(payload(expectations=[expectation(confirmed=True)]))
         self.assertNotIn("verbal_only", codes(report))
 
-    def test_missing_measure_is_flagged(self):
-        report = MODULE.plan(payload(expectations=[expectation(measurable=None)]))
+    def test_missing_measure_is_flagged_only_when_false(self):
+        report = MODULE.plan(payload(expectations=[expectation(measurable=False)]))
         self.assertIn("no_agreed_measure", codes(report))
+        omitted = MODULE.plan(payload(expectations=[expectation(measurable=None)]))
+        self.assertNotIn("no_agreed_measure", codes(omitted))
 
     def test_conflicting_sources_are_reported(self):
         report = MODULE.plan(
@@ -106,11 +113,15 @@ class ExpectationTest(unittest.TestCase):
             )
         )
         self.assertEqual(report["conflicts"][0]["topic"], "在宅勤務")
-        self.assertIn("expectation_conflict", codes(report))
+        self.assertEqual(flag(report, "expectation_conflict")["items"], ["在宅勤務"])
 
     def test_due_before_start_is_flagged(self):
         report = MODULE.plan(payload(expectations=[expectation(due="2026-10-25")]))
-        self.assertIn("due_before_start", codes(report))
+        self.assertIn("pre_start_work", codes(report))
+
+    def test_pre_start_work_without_due_is_flagged(self):
+        report = MODULE.plan(payload(expectations=[expectation(before_start=True)]))
+        self.assertEqual(flag(report, "pre_start_work")["items"], ["x1"])
 
     def test_undecided_contact_is_flagged(self):
         report = MODULE.plan(payload(expectations=[expectation(confirm_with=None)]))
@@ -122,6 +133,17 @@ class ProbationTest(unittest.TestCase):
         report = MODULE.plan(payload(probation={"exists": True, "months": 3}))
         self.assertIn("probation_criteria_unknown", codes(report))
         self.assertIn("probation_conditions_unknown", codes(report))
+
+    def test_conditions_are_checked_one_by_one(self):
+        report = MODULE.plan(
+            payload(probation={"exists": True, "months": 3, "conditions_same": {"pay": True, "work_style": False}})
+        )
+        self.assertEqual(flag(report, "probation_conditions_unknown")["items"], ["employment_type"])
+        self.assertEqual(flag(report, "probation_conditions_differ")["items"], ["work_style"])
+
+    def test_unknown_condition_key_is_rejected(self):
+        with self.assertRaises(ValueError):
+            MODULE.plan(payload(probation={"exists": True, "conditions_same": {"bonus": True}}))
 
     def test_unknown_existence_is_flagged(self):
         report = MODULE.plan(payload(probation=None))
@@ -158,7 +180,10 @@ class CheckpointTest(unittest.TestCase):
         self.assertIn("no_checkpoints", codes(report))
         labels = [item["label"] for item in report["suggested_checkpoints"]]
         self.assertEqual(len(labels), 3)
-        self.assertEqual(report["suggested_checkpoints"][-1]["date"], "2027-01-01")
+        dates = [item["date"] for item in report["suggested_checkpoints"]]
+        # 2026-11-01 は日曜。初週は翌日の月曜、1か月後の 12-01 は火曜、
+        # 試用期間の終わり 2027-01-31 の30日前 2027-01-01 は金曜。
+        self.assertEqual(dates, ["2026-11-02", "2026-12-01", "2027-01-01"])
         self.assertEqual(MODULE.plan(payload())["suggested_checkpoints"], [])
 
     def test_unknown_topic_is_rejected(self):

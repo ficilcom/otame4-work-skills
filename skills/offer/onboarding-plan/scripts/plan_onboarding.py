@@ -44,6 +44,8 @@ WRITTEN_SOURCES = ("notice", "offer_letter", "job_description")
 CONFIRM_WITH = ("recruiter", "manager", "hr", "agent", "undecided")
 TASK_STATUSES = ("done", "planned", "not_started")
 
+PROBATION_CONDITIONS = ("pay", "employment_type", "work_style")
+
 # 試用期間の終わりのこれだけ前までに、本採用の判断基準を上長と確かめる場を置く。
 PROBATION_REVIEW_LEAD_DAYS = 30
 
@@ -55,6 +57,20 @@ def add_months(start: date, months: int) -> date:
     month = month_index % 12 + 1
     day = min(start.day, calendar.monthrange(year, month)[1])
     return date(year, month, day)
+
+
+def next_weekday(day: date) -> date:
+    """土日なら次の月曜に寄せる。祝日と会社の休日は考慮しない。"""
+    while day.weekday() >= 5:
+        day += timedelta(days=1)
+    return day
+
+
+def previous_weekday(day: date) -> date:
+    """土日なら前の金曜に寄せる。祝日と会社の休日は考慮しない。"""
+    while day.weekday() >= 5:
+        day -= timedelta(days=1)
+    return day
 
 
 def parse_probation(raw: object, start: date | None) -> dict[str, Any]:
@@ -77,9 +93,19 @@ def parse_probation(raw: object, start: date | None) -> dict[str, Any]:
         "end_date": computed_end,
         "end_date_given": end_date is not None,
         "criteria_known": optional_bool(probation.get("criteria_known"), "probation.criteria_known"),
-        "conditions_differ": optional_bool(
-            probation.get("conditions_differ"), "probation.conditions_differ"
-        ),
+        "conditions_same": parse_conditions_same(probation.get("conditions_same")),
+    }
+
+
+def parse_conditions_same(raw: object) -> dict[str, bool | None]:
+    """試用期間中の条件が本採用後と同じかを、給与・雇用形態・勤務形態ごとに受け取る。"""
+    conditions = require_object(raw if raw is not None else {}, "probation.conditions_same")
+    unknown = sorted(set(conditions) - set(PROBATION_CONDITIONS))
+    if unknown:
+        raise ValueError(f"probation.conditions_same has unknown keys: {unknown}")
+    return {
+        key: optional_bool(conditions.get(key), f"probation.conditions_same.{key}")
+        for key in PROBATION_CONDITIONS
     }
 
 
@@ -110,6 +136,7 @@ def parse_expectations(raw: object) -> list[dict[str, Any]]:
                     item.get("confirm_with"), f"{path}.confirm_with", CONFIRM_WITH, "undecided"
                 ),
                 "confirmed": optional_bool(item.get("confirmed"), f"{path}.confirmed"),
+                "before_start": optional_bool(item.get("before_start"), f"{path}.before_start"),
             }
         )
     return parsed
@@ -160,11 +187,11 @@ def parse_checkpoints(raw: object, expectation_ids: set[str]) -> list[dict[str, 
 def suggest_checkpoints(start: date, probation_end: date | None) -> list[dict[str, Any]]:
     """確かめる場が1つも入っていないときに出す目安。利用者が決め直す前提で出す。"""
     suggestions = [
-        {"label": "入社初週の上長との面談", "date": start + timedelta(days=6), "with": "manager"},
-        {"label": "入社1か月の振り返り", "date": add_months(start, 1), "with": "manager"},
+        {"label": "入社初週の上長との面談", "date": next_weekday(start + timedelta(days=1)), "with": "manager"},
+        {"label": "入社1か月の振り返り", "date": next_weekday(add_months(start, 1)), "with": "manager"},
     ]
     if probation_end is not None:
-        review = probation_end - timedelta(days=PROBATION_REVIEW_LEAD_DAYS)
+        review = previous_weekday(probation_end - timedelta(days=PROBATION_REVIEW_LEAD_DAYS))
         if review > suggestions[-1]["date"]:
             suggestions.append(
                 {"label": "試用期間の基準の確認", "date": review, "with": "manager"}
@@ -228,7 +255,7 @@ def collect_flags(
             "書面になく、まだ確かめていない期待・約束がある。確定した条件として扱わない",
             verbal,
         )
-    unmeasured = [item["id"] for item in expectations if item["measurable"] is not True]
+    unmeasured = [item["id"] for item in expectations if item["measurable"] is False]
     if unmeasured:
         add(
             "no_agreed_measure",
@@ -241,18 +268,21 @@ def collect_flags(
     if conflicts:
         add(
             "expectation_conflict",
-            f"出典によって内容が食い違う項目がある: {'、'.join(item['topic'] for item in conflicts)}",
+            "出典によって内容が食い違う項目がある。どちらが正しいかを推測せず、確かめる",
+            [item["topic"] for item in conflicts],
         )
-    if start is not None:
-        due_before_start = [
-            item["id"] for item in expectations if item["due"] is not None and item["due"] < start
-        ]
-        if due_before_start:
-            add(
-                "due_before_start",
-                "入社日より前が期限になっている期待がある。入社前の作業を求められているなら、賃金の扱いと参加の要否を確かめる",
-                due_before_start,
-            )
+    before_start = [
+        item["id"]
+        for item in expectations
+        if item["before_start"] is True
+        or (start is not None and item["due"] is not None and item["due"] < start)
+    ]
+    if before_start:
+        add(
+            "pre_start_work",
+            "入社前の作業を求められている。賃金の扱い、参加の要否、期限と範囲を確かめる",
+            before_start,
+        )
 
     if probation["exists"] is None:
         add("probation_unknown", "試用期間があるかが確かめられていない")
@@ -264,10 +294,21 @@ def collect_flags(
                 "probation_criteria_unknown",
                 "本採用の判断基準が示されていない。入社後の早い時期に上長と確かめる",
             )
-        if probation["conditions_differ"] is None:
+        unknown_conditions = [
+            key for key, same in probation["conditions_same"].items() if same is None
+        ]
+        if unknown_conditions:
             add(
                 "probation_conditions_unknown",
-                "試用期間中の給与・雇用形態が本採用後と同じかが確かめられていない",
+                "試用期間中の条件が本採用後と同じかを確かめていない項目がある",
+                unknown_conditions,
+            )
+        differ = [key for key, same in probation["conditions_same"].items() if same is False]
+        if differ:
+            add(
+                "probation_conditions_differ",
+                "試用期間中は本採用後と条件が違う項目がある。違いの中身と、本採用後に切り替わる日を確かめる",
+                differ,
             )
 
     scheduled = {topic for checkpoint in checkpoints for topic in checkpoint["topics"]}
@@ -322,7 +363,7 @@ def collect_flags(
             add("pre_start_task_overdue", "期限を過ぎた入社前の手続きがある", overdue)
     undated = [task["label"] for task in tasks if task["due"] is None and task["status"] != "done"]
     if undated:
-        add("pre_start_task_undated", "期限が分からない入社前の手続きがある。会社の案内で確かめる", undated)
+        add("pre_start_task_undated", "期限が分からない入社前の手続き・準備がある。会社の案内で確かめる", undated)
 
     return flags
 
@@ -353,7 +394,7 @@ def plan(payload: object) -> dict[str, Any]:
             "exists": probation["exists"],
             "months": probation["months"],
             "criteria_known": probation["criteria_known"],
-            "conditions_differ": probation["conditions_differ"],
+            "conditions_same": probation["conditions_same"],
         },
         "summary": {
             "expectations": len(expectations),
@@ -361,7 +402,7 @@ def plan(payload: object) -> dict[str, Any]:
             "verbal_unconfirmed": sum(
                 1 for item in expectations if not item["in_writing"] and item["confirmed"] is not True
             ),
-            "without_measure": sum(1 for item in expectations if item["measurable"] is not True),
+            "without_measure": sum(1 for item in expectations if item["measurable"] is False),
         },
         "expectations": [
             {
@@ -389,7 +430,7 @@ def plan(payload: object) -> dict[str, Any]:
         ),
         "notes": [
             "試用期間の終わりは入社日と月数から計算した日付で、会社の定めで確かめる",
-            "確かめる場の目安は日付の例であり、日付と相手は利用者と会社が決める",
+            "確かめる場の目安は日付の例であり、土日は避けているが祝日と会社の休日は考慮していない。日付と相手は利用者と会社が決める",
             "この出力は期待の整理であり、試用期間の評価や職場への適応の見込みではない",
         ],
     }

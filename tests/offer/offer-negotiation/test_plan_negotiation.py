@@ -89,6 +89,21 @@ class AmountTest(unittest.TestCase):
         self.assertIn("posted_range_unit_mismatch", codes(report))
         self.assertNotIn("ask_above_posted_range", codes(report))
 
+    def test_range_with_other_components_is_not_compared(self):
+        report = MODULE.plan(
+            payload(
+                requests=[
+                    pay_request(
+                        posted_range={"min": 320000, "max": 450000, "components_match": False}
+                    )
+                ]
+            )
+        )
+        self.assertEqual(
+            report["requests"][0]["amount"]["posted_range_position"], "components_mismatch"
+        )
+        self.assertIn("posted_range_components_mismatch", codes(report))
+
     def test_pay_request_without_numbers_cannot_be_measured(self):
         report = MODULE.plan(payload(requests=[pay_request(current_amount=None)]))
         self.assertIn("pay_amount_incomplete", codes(report))
@@ -118,6 +133,11 @@ class BasisTest(unittest.TestCase):
     def test_request_without_basis_is_flagged(self):
         report = MODULE.plan(payload(requests=[pay_request(bases=[])]))
         self.assertEqual(flag(report, "request_without_basis")["items"], ["base"])
+
+    def test_written_offer_alone_is_not_a_basis(self):
+        report = MODULE.plan(payload(requests=[pay_request(bases=[{"kind": "written_offer"}])]))
+        self.assertIn("request_without_basis", codes(report))
+        self.assertEqual(report["summary"]["without_basis"], 1)
 
     def test_interview_only_basis_is_flagged(self):
         report = MODULE.plan(payload(requests=[pay_request(bases=[{"kind": "interview"}])]))
@@ -157,6 +177,12 @@ class DecisionTest(unittest.TestCase):
         second = pay_request(id="allowance", topic="住宅手当", priority=None)
         report = MODULE.plan(payload(requests=[pay_request(), second]))
         self.assertEqual(flag(report, "priority_unset")["items"], ["allowance"])
+        self.assertEqual(report["summary"]["by_priority"]["unset"], ["allowance"])
+        self.assertEqual(report["summary"]["by_priority"]["want"], [])
+
+    def test_missing_current_text_is_flagged(self):
+        report = MODULE.plan(payload(requests=[pay_request(current_text=None)]))
+        self.assertIn("current_term_unconfirmed", codes(report))
 
     def test_no_written_terms_comes_first(self):
         report = MODULE.plan(payload(written_terms=False))
@@ -187,6 +213,11 @@ class ScheduleTest(unittest.TestCase):
     def test_request_after_deadline_is_flagged(self):
         report = MODULE.plan(payload(plan={"request_date": "2026-09-16", "response_wait_days": 1}))
         self.assertIn("request_after_deadline", codes(report))
+
+    def test_weekend_deadline_is_flagged(self):
+        report = MODULE.plan(payload(offer={"acceptance_deadline": "2026-09-19"}))
+        self.assertIn("deadline_on_weekend", codes(report))
+        self.assertNotIn("deadline_on_weekend", codes(MODULE.plan(payload())))
 
     def test_passed_deadline_is_flagged(self):
         report = MODULE.plan(payload(as_of="2026-09-20"))

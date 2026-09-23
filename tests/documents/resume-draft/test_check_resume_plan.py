@@ -139,6 +139,8 @@ class TimelineTest(unittest.TestCase):
         sections = report["outline"]["sections"]
         self.assertEqual([section["label"] for section in sections], ["架空B社", "架空A社"])
         self.assertEqual(sections[0]["end"], "現在")
+        self.assertEqual(sections[1]["months"], 48)
+        self.assertEqual(sections[0]["months"], 54)
 
     def test_chronological_puts_oldest_first(self):
         report = MODULE.check(payload(format="chronological"))

@@ -228,6 +228,7 @@ def build_outline(
                 "label": period["label"],
                 "start": format_month(period["start"]),
                 "end": format_month(period["end"]) if period["end"] is not None else "現在",
+                "months": period["end_for_math"] - period["start"] + 1,
                 "experiences": [
                     item["id"] for item in included if item["timeline_label"] == period["label"]
                 ],

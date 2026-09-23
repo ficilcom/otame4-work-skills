@@ -14,12 +14,14 @@
 | 最初に任される仕事 | 入社後1〜3か月の仕事 | 誰から引き継ぐか、いつまでに |
 | 評価の基準 | 何ができたら評価されるか | 試用期間の基準と通常の評価の基準が別か |
 | 将来の役割 | 「半年後にリーダー」「いずれ企画に」 | 時期と条件。誰が決めるか |
-| 勤務形態 | 在宅日数、勤務時間帯、フレックス | 試用期間中も同じか。チームの運用と合っているか |
-| 配属・勤務地 | 部署、拠点 | 入社時点で確定しているか |
+| 勤務場所・勤務形態 | 拠点、在宅日数、勤務時間帯、フレックス | 試用期間中も同じか。チームの運用と合っているか |
+| 配属 | 部署、チーム、直属の上長 | 入社時点で確定しているか |
 | 研修・入社前の課題 | 入社前研修、事前学習 | 賃金の扱い、参加の要否 |
 | 交渉で合意したこと | 給与の見直し時期、入社日 | 改訂された書面に入っているか |
 
-各項目に、**誰が・いつ・どこで言ったか**（出典）と、書面にあるかを付ける。言った人の名前は、確かめる相手を決めるためにだけ使う。
+各項目に、**誰が・いつ・どこで言ったか**（出典）と、書面にあるかを付ける。言った人の名前は、確かめる相手を決めるためにだけ使う。言った人が分からない場合は、分からないと書く。
+
+同じ条件について出典が複数ある場合（エージェントの「フルリモート可」と通知書の就業場所）は、**同じ項目名で別々の行にする。** 項目名が違うと食い違いが見えなくなる。
 
 ## 3つに分ける
 
@@ -36,7 +38,7 @@
 確かめること:
 
 - 期間（開始日と終わりの日）
-- 期間中の給与、雇用形態、勤務形態が本採用後と同じか
+- 期間中の給与、雇用形態、勤務形態が本採用後と同じか（3つは別々に確かめる。給与だけ同じと書かれていることがある）
 - 本採用の判断基準と、判断する人
 - 延長があり得るか、その条件
 
@@ -73,18 +75,32 @@
     "exists": true,
     "months": 3,
     "criteria_known": false,
-    "conditions_differ": null
+    "conditions_same": {"pay": true, "employment_type": null, "work_style": null}
   },
   "expectations": [
     {
       "id": "x1",
-      "topic": "在宅勤務",
+      "topic": "勤務場所",
       "content": "週3日在宅可",
       "source": "interview",
       "said_by": "配属先の課長",
       "said_on": "2026-08-20",
-      "measurable": true,
       "confirm_with": "manager"
+    },
+    {
+      "id": "x3",
+      "topic": "勤務場所",
+      "content": "就業場所：本社および会社が指定する場所",
+      "source": "notice",
+      "confirm_with": "recruiter"
+    },
+    {
+      "id": "x4",
+      "topic": "入社前の課題",
+      "content": "課題図書を読んでおく",
+      "source": "interview",
+      "before_start": true,
+      "confirm_with": "recruiter"
     },
     {
       "id": "x2",
@@ -100,15 +116,19 @@
     {"label": "入社手続き書類の提出", "due": "2026-10-25", "status": "planned"}
   ],
   "checkpoints": [
+    {"label": "採用担当者への確認", "date": "2026-10-20", "with": "recruiter", "topics": ["x3", "x4"]},
     {"label": "上長との初回面談", "date": "2026-11-02", "with": "manager", "topics": ["x1", "x2"]}
   ]
 }
 ```
 
 - `written_terms` は労働条件を書面（電子交付を含む）で受け取っているか。不明なら `null`。
+- `probation.conditions_same` は、試用期間中の条件が本採用後と同じかを `pay`（給与）/ `employment_type`（雇用形態）/ `work_style`（勤務形態）ごとに `true` / `false` で入れる。分からないものは省略する。
 - `probation.months` か `probation.end_date` のどちらかを入れる。`months` だけのときは、入社日から数えた終わりの日を計算する。会社の定めと違う場合は `end_date` を入れる。
 - `expectations[].source` は `notice` / `offer_letter` / `job_description` / `posting` / `interview` / `agent` / `negotiation` / `unknown`。最初の3つだけを書面として扱う。求人票（`posting`）は書面として扱わない。
-- `measurable` は、何ができたら達成かが決まっているか。分からなければ省略する。
+- `topic` は、同じ条件について出典が複数あるときは同じ文字列にする。食い違いの検出は `topic` が一致する行どうしで行う。
+- `measurable` は、担当範囲・将来の役割・評価の基準のような期待について、何ができたら達成かが決まっていれば `true`、決まっていなければ `false`。勤務場所のように測る対象でない項目は省略する。`false` の項目だけを注記する。
+- `before_start` は、入社前にやるよう求められた作業（課題、研修、事前学習）なら `true`。期限が入社日より前の項目も同じ扱いになる。
 - `confirm_with` と `checkpoints[].with` は `recruiter` / `manager` / `hr` / `agent` / `undecided`。
 - `confirmed` は、入社後に上長などと確かめ終えたら `true` にする。
 - `checkpoints[].topics` は、その場で確かめる `expectations` の `id`。
