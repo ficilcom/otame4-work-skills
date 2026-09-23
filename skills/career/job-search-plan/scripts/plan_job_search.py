@@ -15,6 +15,7 @@ from typing import Any
 from _common import (
     flag_collector,
     optional_bool,
+    optional_choice,
     optional_date,
     optional_number,
     optional_text,
@@ -97,12 +98,10 @@ def parse_channels(raw: object) -> dict[str, dict[str, Any]]:
         channel_id = require_text(item.get("id"), f"{path}.id")
         if channel_id in channels:
             raise ValueError(f"{path}.id is duplicated: {channel_id!r}")
-        kind = item.get("kind", "other")
-        if kind not in CHANNEL_KINDS:
-            raise ValueError(f"{path}.kind must be one of {list(CHANNEL_KINDS)}")
-        blocked = item.get("current_employer_blocked", "unknown")
-        if blocked not in BLOCK_STATES:
-            raise ValueError(f"{path}.current_employer_blocked must be one of {list(BLOCK_STATES)}")
+        kind = optional_choice(item.get("kind"), f"{path}.kind", CHANNEL_KINDS, "other")
+        blocked = optional_choice(
+            item.get("current_employer_blocked"), f"{path}.current_employer_blocked", BLOCK_STATES, "unknown"
+        )
         channels[channel_id] = {
             "id": channel_id,
             "kind": kind,
@@ -127,9 +126,7 @@ def parse_applications(raw: object, channels: dict[str, dict[str, Any]]) -> list
         if application_id in seen:
             raise ValueError(f"{path}.id is duplicated: {application_id!r}")
         seen.add(application_id)
-        stage = item.get("stage", "considering")
-        if stage not in STAGES:
-            raise ValueError(f"{path}.stage must be one of {list(STAGES)}")
+        stage = optional_choice(item.get("stage"), f"{path}.stage", STAGES, "considering")
         channel = optional_text(item.get("channel"), f"{path}.channel")
         if channel is not None and channel not in channels:
             raise ValueError(f"{path}.channel refers to an unknown channel: {channel!r}")

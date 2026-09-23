@@ -14,6 +14,7 @@ from typing import Any
 from _common import (
     flag_collector,
     optional_bool,
+    optional_choice,
     optional_month_index,
     require_list,
     require_object,
@@ -85,12 +86,10 @@ def parse_claims(raw: object) -> list[dict[str, Any]]:
             raise ValueError(f"claims[{index}].id is duplicated: {claim_id!r}")
         seen.add(claim_id)
 
-        source = item.get("source", "unknown")
-        if source not in DOCUMENT_SOURCES:
-            raise ValueError(f"claims[{index}].source must be one of {list(DOCUMENT_SOURCES)}")
-        role = item.get("role_stated", "unstated")
-        if role not in ROLE_STATEMENTS:
-            raise ValueError(f"claims[{index}].role_stated must be one of {list(ROLE_STATEMENTS)}")
+        source = optional_choice(item.get("source"), f"claims[{index}].source", DOCUMENT_SOURCES, "unknown")
+        role = optional_choice(
+            item.get("role_stated"), f"claims[{index}].role_stated", ROLE_STATEMENTS, "unstated"
+        )
 
         metrics = [
             require_text(metric, f"claims[{index}].metrics[{position}]")
@@ -142,9 +141,7 @@ def parse_requirements(raw: object, claim_ids: set[str]) -> list[dict[str, Any]]
     requirements = []
     for index, entry in enumerate(entries):
         item = require_object(entry, f"requirements[{index}]")
-        kind = item.get("kind", "must")
-        if kind not in REQUIREMENT_KINDS:
-            raise ValueError(f"requirements[{index}].kind must be one of {list(REQUIREMENT_KINDS)}")
+        kind = optional_choice(item.get("kind"), f"requirements[{index}].kind", REQUIREMENT_KINDS, "must")
         covered_by = [
             require_text(value, f"requirements[{index}].covered_by[{position}]")
             for position, value in enumerate(
@@ -175,9 +172,7 @@ def parse_prepared(raw: object) -> dict[str, str]:
         topic = require_text(item.get("topic"), f"prepared[{index}].topic")
         if topic not in known:
             raise ValueError(f"prepared[{index}].topic is not a known topic: {topic!r}")
-        status = item.get("status", "none")
-        if status not in PREPARED_STATUSES:
-            raise ValueError(f"prepared[{index}].status must be one of {list(PREPARED_STATUSES)}")
+        status = optional_choice(item.get("status"), f"prepared[{index}].status", PREPARED_STATUSES, "none")
         prepared[topic] = status
     return prepared
 
@@ -363,12 +358,8 @@ def analyze(payload: object) -> dict[str, Any]:
     data = require_object(payload, "input")
     role = require_text(data.get("role"), "role")
 
-    track = data.get("track", "chuto")
-    if track not in TRACKS:
-        raise ValueError(f"track must be one of {list(TRACKS)}")
-    stage = data.get("stage", "unknown")
-    if stage not in STAGES:
-        raise ValueError(f"stage must be one of {list(STAGES)}")
+    track = optional_choice(data.get("track"), "track", TRACKS, "chuto")
+    stage = optional_choice(data.get("stage"), "stage", STAGES, "unknown")
 
     claims = parse_claims(data.get("claims"))
     timeline = parse_timeline(data.get("timeline"))

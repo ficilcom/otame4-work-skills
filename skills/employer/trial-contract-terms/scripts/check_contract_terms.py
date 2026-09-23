@@ -16,6 +16,7 @@ from typing import Any
 from _common import (
     flag_collector,
     optional_bool,
+    optional_choice,
     optional_date,
     optional_number,
     optional_positive_int,
@@ -70,17 +71,9 @@ CHECKLIST: tuple[tuple[str, str, str, bool, bool], ...] = (
 CHECKLIST_CODES = {code for code, _, _, _, _ in CHECKLIST}
 
 
-def parse_choice(value: object, path: str, allowed: tuple[str, ...], default: str) -> str:
-    if value is None:
-        return default
-    if value not in allowed:
-        raise ValueError(f"{path} must be one of {list(allowed)}")
-    return str(value)
-
-
 def parse_document(raw: object) -> dict[str, Any]:
     block = require_object(raw if raw is not None else {}, "document")
-    form = parse_choice(block.get("form"), "document.form", DOCUMENT_FORMS, "unknown")
+    form = optional_choice(block.get("form"), "document.form", DOCUMENT_FORMS, "unknown")
     return {
         "form": form,
         "in_writing": form in WRITTEN_SOURCES,
@@ -103,7 +96,7 @@ def parse_items(raw: object) -> dict[str, dict[str, Any]]:
         if source is not None and source not in TERM_SOURCES:
             raise ValueError(f"{path}.source must be one of {list(TERM_SOURCES)}")
         parsed[str(code)] = {
-            "status": parse_choice(item.get("status"), f"{path}.status", ITEM_STATUSES, "unknown"),
+            "status": optional_choice(item.get("status"), f"{path}.status", ITEM_STATUSES, "unknown"),
             "source": source,
             "applicable": optional_bool(item.get("applicable"), f"{path}.applicable"),
             "note": optional_text(item.get("note"), f"{path}.note"),
@@ -114,7 +107,7 @@ def parse_items(raw: object) -> dict[str, dict[str, Any]]:
 def parse_compensation(raw: object) -> dict[str, Any]:
     block = require_object(raw if raw is not None else {}, "compensation")
     return {
-        "basis": parse_choice(block.get("basis"), "compensation.basis", COMPENSATION_BASIS, "unknown"),
+        "basis": optional_choice(block.get("basis"), "compensation.basis", COMPENSATION_BASIS, "unknown"),
         "hourly_rate": optional_number(block.get("hourly_rate"), "compensation.hourly_rate", allow_zero=False),
         "fixed_amount": optional_number(block.get("fixed_amount"), "compensation.fixed_amount", allow_zero=False),
         "hours": optional_number(block.get("hours"), "compensation.hours"),
@@ -382,7 +375,7 @@ def decide_readiness(flags: list[dict[str, Any]]) -> dict[str, Any]:
 
 def check(payload: object) -> dict[str, Any]:
     data = require_object(payload, "input")
-    engagement = parse_choice(data.get("engagement"), "engagement", ENGAGEMENTS, "unknown")
+    engagement = optional_choice(data.get("engagement"), "engagement", ENGAGEMENTS, "unknown")
     document = parse_document(data.get("document"))
     items = parse_items(data.get("items"))
     compensation = parse_compensation(data.get("compensation"))

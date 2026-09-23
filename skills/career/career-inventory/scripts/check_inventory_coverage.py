@@ -12,6 +12,7 @@ from typing import Any
 
 from _common import (
     flag_collector,
+    optional_choice,
     optional_month_index,
     optional_text,
     require_list,
@@ -90,9 +91,9 @@ def parse_metrics(raw: object, path: str) -> list[dict[str, Any]]:
     metrics = []
     for index, entry in enumerate(require_list(raw if raw is not None else [], path)):
         item = require_object(entry, f"{path}[{index}]")
-        evidence = item.get("evidence", "unknown")
-        if evidence not in EVIDENCE_LEVELS:
-            raise ValueError(f"{path}[{index}].evidence must be one of {list(EVIDENCE_LEVELS)}")
+        evidence = optional_choice(
+            item.get("evidence"), f"{path}[{index}].evidence", EVIDENCE_LEVELS, "unknown"
+        )
         metrics.append(
             {
                 "text": require_text(item.get("text"), f"{path}[{index}].text"),
@@ -119,15 +120,9 @@ def parse_experiences(raw: object, labels: set[str]) -> list[dict[str, Any]]:
         if label is not None and label not in labels:
             raise ValueError(f"{path}.timeline_label is not in the timeline: {label!r}")
 
-        kind = item.get("kind", "other")
-        if kind not in EXPERIENCE_KINDS:
-            raise ValueError(f"{path}.kind must be one of {list(EXPERIENCE_KINDS)}")
-        role = item.get("role", "unstated")
-        if role not in ROLE_STATEMENTS:
-            raise ValueError(f"{path}.role must be one of {list(ROLE_STATEMENTS)}")
-        evidence = item.get("evidence", "unknown")
-        if evidence not in EVIDENCE_LEVELS:
-            raise ValueError(f"{path}.evidence must be one of {list(EVIDENCE_LEVELS)}")
+        kind = optional_choice(item.get("kind"), f"{path}.kind", EXPERIENCE_KINDS, "other")
+        role = optional_choice(item.get("role"), f"{path}.role", ROLE_STATEMENTS, "unstated")
+        evidence = optional_choice(item.get("evidence"), f"{path}.evidence", EVIDENCE_LEVELS, "unknown")
 
         period = item.get("period")
         start = end = None
@@ -344,9 +339,7 @@ def collect_flags(
 
 def analyze(payload: object) -> dict[str, Any]:
     data = require_object(payload, "input")
-    track = data.get("track", "chuto")
-    if track not in TRACKS:
-        raise ValueError(f"track must be one of {list(TRACKS)}")
+    track = optional_choice(data.get("track"), "track", TRACKS, "chuto")
 
     as_of = optional_month_index(data.get("as_of"), "as_of")
     timeline = parse_timeline(data.get("timeline"), as_of)

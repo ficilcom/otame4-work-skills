@@ -14,6 +14,7 @@ from typing import Any
 from _common import (
     flag_collector,
     optional_bool,
+    optional_choice,
     optional_date,
     optional_text,
     require_list,
@@ -63,12 +64,8 @@ def parse_declining(raw: object) -> list[dict[str, Any]]:
             raise ValueError(f"{path}.id is duplicated: {decline_id!r}")
         seen.add(decline_id)
 
-        stage = item.get("stage", "unknown")
-        if stage not in DECLINE_STAGES:
-            raise ValueError(f"{path}.stage must be one of {list(DECLINE_STAGES)}")
-        route = item.get("route", "unknown")
-        if route not in ROUTES:
-            raise ValueError(f"{path}.route must be one of {list(ROUTES)}")
+        stage = optional_choice(item.get("stage"), f"{path}.stage", DECLINE_STAGES, "unknown")
+        route = optional_choice(item.get("route"), f"{path}.route", ROUTES, "unknown")
 
         loose = require_object(item.get("loose_ends", {}), f"{path}.loose_ends")
         for key in loose:

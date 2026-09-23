@@ -16,6 +16,7 @@ from typing import Any
 from _common import (
     flag_collector,
     optional_bool,
+    optional_choice,
     optional_date,
     optional_number,
     optional_positive_int,
@@ -91,17 +92,9 @@ def as_hours(value: Decimal | None) -> float | None:
     return float(value.quantize(HOUR))
 
 
-def parse_choice(value: object, path: str, allowed: tuple[str, ...], default: str) -> str:
-    if value is None:
-        return default
-    if value not in allowed:
-        raise ValueError(f"{path} must be one of {list(allowed)}")
-    return str(value)
-
-
 def parse_offer(raw: object) -> dict[str, Any]:
     block = require_object(raw if raw is not None else {}, "offer")
-    form = parse_choice(block.get("form"), "offer.form", OFFER_FORMS, "unknown")
+    form = optional_choice(block.get("form"), "offer.form", OFFER_FORMS, "unknown")
     return {
         "form": form,
         "in_writing": form in WRITTEN_SOURCES,
@@ -124,7 +117,7 @@ def parse_items(raw: object) -> dict[str, dict[str, Any]]:
         if source is not None and source not in TERM_SOURCES:
             raise ValueError(f"{path}.source must be one of {list(TERM_SOURCES)}")
         parsed[str(code)] = {
-            "status": parse_choice(item.get("status"), f"{path}.status", ITEM_STATUSES, "unknown"),
+            "status": optional_choice(item.get("status"), f"{path}.status", ITEM_STATUSES, "unknown"),
             "source": source,
             "applicable": optional_bool(item.get("applicable"), f"{path}.applicable"),
             "note": optional_text(item.get("note"), f"{path}.note"),
@@ -159,7 +152,7 @@ def parse_work(raw: object) -> list[dict[str, Any]]:
 def parse_compensation(raw: object) -> dict[str, Any]:
     block = require_object(raw if raw is not None else {}, "compensation")
     return {
-        "basis": parse_choice(
+        "basis": optional_choice(
             block.get("basis"), "compensation.basis", COMPENSATION_BASIS, "unknown"
         ),
         "fixed_amount": optional_number(
@@ -176,7 +169,7 @@ def parse_compensation(raw: object) -> dict[str, Any]:
             block.get("expenses_borne_by_worker"), "compensation.expenses_borne_by_worker"
         ),
         "withholding": optional_bool(block.get("withholding"), "compensation.withholding"),
-        "consumption_tax": parse_choice(
+        "consumption_tax": optional_choice(
             block.get("consumption_tax"),
             "compensation.consumption_tax",
             TAX_TREATMENTS,
@@ -546,7 +539,7 @@ def collect_flags(
 
 def check(payload: object) -> dict[str, Any]:
     data = require_object(payload, "input")
-    engagement = parse_choice(data.get("engagement"), "engagement", ENGAGEMENTS, "unknown")
+    engagement = optional_choice(data.get("engagement"), "engagement", ENGAGEMENTS, "unknown")
     offer = parse_offer(data.get("offer"))
     items = parse_items(data.get("items"))
     tasks = parse_work(data.get("work"))

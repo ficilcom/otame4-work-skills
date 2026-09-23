@@ -15,6 +15,7 @@ from typing import Any
 from _common import (
     flag_collector,
     optional_bool,
+    optional_choice,
     optional_date,
     optional_number,
     optional_int,
@@ -55,9 +56,7 @@ def parse_task(raw: object, index: int) -> dict[str, Any]:
     path = f"tasks[{index}]"
     task = require_object(raw, path)
 
-    kind = task.get("kind", "unknown")
-    if kind not in TASK_KINDS:
-        raise ValueError(f"{path}.kind must be one of {list(TASK_KINDS)}")
+    kind = optional_choice(task.get("kind"), f"{path}.kind", TASK_KINDS, "unknown")
 
     low = optional_number(task.get("candidate_hours"), f"{path}.candidate_hours")
     high = optional_number(task.get("candidate_hours_max"), f"{path}.candidate_hours_max")
@@ -128,9 +127,7 @@ def parse_period(raw: object) -> dict[str, Any]:
 
 def parse_compensation(raw: object) -> dict[str, Any]:
     block = require_object(raw or {}, "compensation")
-    basis = block.get("basis", "unknown")
-    if basis not in COMPENSATION_BASIS:
-        raise ValueError(f"compensation.basis must be one of {list(COMPENSATION_BASIS)}")
+    basis = optional_choice(block.get("basis"), "compensation.basis", COMPENSATION_BASIS, "unknown")
     return {
         "basis": basis,
         "hourly_rate": optional_number(block.get("hourly_rate"), "compensation.hourly_rate", allow_zero=False),
@@ -147,9 +144,9 @@ def parse_conditions(raw: object) -> list[dict[str, Any]]:
     for index, entry in enumerate(require_list(raw or [], "conditions")):
         path = f"conditions[{index}]"
         item = require_object(entry, path)
-        agreement = item.get("agreement", "unconfirmed")
-        if agreement not in AGREEMENT_STATES:
-            raise ValueError(f"{path}.agreement must be one of {list(AGREEMENT_STATES)}")
+        agreement = optional_choice(
+            item.get("agreement"), f"{path}.agreement", AGREEMENT_STATES, "unconfirmed"
+        )
         conditions.append(
             {
                 "topic": require_text(item.get("topic"), f"{path}.topic"),
@@ -322,9 +319,9 @@ def check(payload: object) -> dict[str, Any]:
     data = require_object(payload, "input")
     trial = require_object(data.get("trial", {}), "trial")
 
-    engagement_type = trial.get("engagement_type", "unknown")
-    if engagement_type not in ENGAGEMENT_TYPES:
-        raise ValueError(f"trial.engagement_type must be one of {list(ENGAGEMENT_TYPES)}")
+    engagement_type = optional_choice(
+        trial.get("engagement_type"), "trial.engagement_type", ENGAGEMENT_TYPES, "unknown"
+    )
 
     raw_tasks = require_list(data.get("tasks"), "tasks")
     if not raw_tasks:

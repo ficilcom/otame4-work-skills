@@ -11,6 +11,7 @@ import re
 from typing import Any
 
 from _common import (
+    optional_choice,
     optional_positive_int,
     require_list,
     require_object,
@@ -199,9 +200,7 @@ def analyze_document(raw: object, index: int, count_rule: str) -> dict[str, Any]
 
 def analyze(payload: object) -> dict[str, Any]:
     data = require_object(payload, "input")
-    count_rule = data.get("count_rule", "with_whitespace")
-    if count_rule not in COUNT_RULES:
-        raise ValueError(f"count_rule must be one of {COUNT_RULES}")
+    count_rule = optional_choice(data.get("count_rule"), "count_rule", COUNT_RULES, "with_whitespace")
     count_rule_confirmed = bool(data.get("count_rule_confirmed", False))
 
     documents = require_list(data.get("documents"), "documents")

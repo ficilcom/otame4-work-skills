@@ -14,6 +14,7 @@ from typing import Any
 from _common import (
     flag_collector,
     optional_bool,
+    optional_choice,
     optional_number,
     optional_text,
     require_list,
@@ -95,9 +96,9 @@ def parse_offer(raw: object, index: int) -> dict[str, Any]:
     label = require_text(offer.get("label"), f"{path}.label")
 
     compensation = require_object(offer.get("compensation", {}), f"{path}.compensation")
-    basis = compensation.get("basis", "unknown")
-    if basis not in COMPENSATION_BASIS:
-        raise ValueError(f"{path}.compensation.basis must be one of {list(COMPENSATION_BASIS)}")
+    basis = optional_choice(
+        compensation.get("basis"), f"{path}.compensation.basis", COMPENSATION_BASIS, "unknown"
+    )
 
     components = require_object(compensation.get("components", {}), f"{path}.compensation.components")
     working = require_object(offer.get("working_hours", {}), f"{path}.working_hours")

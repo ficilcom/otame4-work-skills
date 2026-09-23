@@ -80,6 +80,15 @@ def optional_text(value: object, path: str) -> str | None:
     return None if value is None else require_text(value, path)
 
 
+def optional_choice(value: object, path: str, allowed: tuple[str, ...], default: str) -> str:
+    """決められた選択肢の1つを返す。未指定と null は `default` として扱う。"""
+    if value is None:
+        return default
+    if value not in allowed:
+        raise ValueError(f"{path} must be one of {list(allowed)}")
+    return str(value)
+
+
 def optional_bool(value: object, path: str) -> bool | None:
     if value is None:
         return None

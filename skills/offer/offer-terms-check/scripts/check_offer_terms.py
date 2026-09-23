@@ -15,6 +15,7 @@ from _common import (
     flag_collector,
     optional_amount,
     optional_bool,
+    optional_choice,
     optional_date,
     require_list,
     require_object,
@@ -116,12 +117,8 @@ CHECKLIST_CODES = {code for code, _, _, _ in CHECKLIST}
 
 def parse_document(raw: object) -> dict[str, Any]:
     document = require_object(raw if raw is not None else {}, "document")
-    kind = document.get("kind", "unknown")
-    if kind not in DOCUMENT_KINDS:
-        raise ValueError(f"document.kind must be one of {list(DOCUMENT_KINDS)}")
-    form = document.get("form", "unknown")
-    if form not in DOCUMENT_FORMS:
-        raise ValueError(f"document.form must be one of {list(DOCUMENT_FORMS)}")
+    kind = optional_choice(document.get("kind"), "document.kind", DOCUMENT_KINDS, "unknown")
+    form = optional_choice(document.get("form"), "document.form", DOCUMENT_FORMS, "unknown")
     received = optional_date(document.get("received_date"), "document.received_date")
     return {
         "kind": kind,
@@ -133,9 +130,7 @@ def parse_document(raw: object) -> dict[str, Any]:
 
 def parse_contract(raw: object) -> dict[str, Any]:
     contract = require_object(raw if raw is not None else {}, "contract")
-    contract_type = contract.get("type", "unknown")
-    if contract_type not in CONTRACT_TYPES:
-        raise ValueError(f"contract.type must be one of {list(CONTRACT_TYPES)}")
+    contract_type = optional_choice(contract.get("type"), "contract.type", CONTRACT_TYPES, "unknown")
     return {
         "type": contract_type,
         "shift_work": optional_bool(contract.get("shift_work"), "contract.shift_work"),
@@ -167,12 +162,8 @@ def parse_items(raw: object) -> dict[str, dict[str, Any]]:
             raise ValueError(f"items[{index}].code is not a known checklist code: {code!r}")
         if code in parsed:
             raise ValueError(f"items[{index}].code is duplicated: {code!r}")
-        status = item.get("status", "unknown")
-        if status not in ITEM_STATUSES:
-            raise ValueError(f"items[{index}].status must be one of {list(ITEM_STATUSES)}")
-        source = item.get("source", "unknown")
-        if source not in SOURCES:
-            raise ValueError(f"items[{index}].source must be one of {list(SOURCES)}")
+        status = optional_choice(item.get("status"), f"items[{index}].status", ITEM_STATUSES, "unknown")
+        source = optional_choice(item.get("source"), f"items[{index}].source", SOURCES, "unknown")
         note = item.get("note")
         if note is not None and not isinstance(note, str):
             raise ValueError(f"items[{index}].note must be a string or null")

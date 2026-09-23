@@ -13,6 +13,7 @@ from typing import Any
 from _common import (
     flag_collector,
     optional_bool,
+    optional_choice,
     optional_date,
     optional_text,
     require_list,
@@ -34,9 +35,9 @@ def parse_questions(raw: object) -> list[dict[str, Any]]:
     questions = []
     for index, entry in enumerate(entries):
         item = require_object(entry, f"questions[{index}]")
-        answered = item.get("answered", "none")
-        if answered not in ANSWER_LEVELS:
-            raise ValueError(f"questions[{index}].answered must be one of {list(ANSWER_LEVELS)}")
+        answered = optional_choice(
+            item.get("answered"), f"questions[{index}].answered", ANSWER_LEVELS, "none"
+        )
         questions.append(
             {
                 "text": require_text(item.get("text"), f"questions[{index}].text"),
@@ -54,11 +55,9 @@ def parse_reverse_questions(raw: object) -> list[dict[str, Any]]:
     asked = []
     for index, entry in enumerate(entries):
         item = require_object(entry, f"questions_asked[{index}]")
-        result = item.get("result", "unanswered")
-        if result not in REVERSE_RESULTS:
-            raise ValueError(
-                f"questions_asked[{index}].result must be one of {list(REVERSE_RESULTS)}"
-            )
+        result = optional_choice(
+            item.get("result"), f"questions_asked[{index}].result", REVERSE_RESULTS, "unanswered"
+        )
         asked.append(
             {
                 "text": require_text(item.get("text"), f"questions_asked[{index}].text"),
@@ -94,9 +93,7 @@ def parse_statements(raw: object) -> list[dict[str, Any]]:
 
 def parse_next_steps(raw: object) -> dict[str, Any]:
     steps = require_object(raw if raw is not None else {}, "next_steps")
-    next_stage = steps.get("next_stage", "unknown")
-    if next_stage not in STAGES:
-        raise ValueError(f"next_steps.next_stage must be one of {list(STAGES)}")
+    next_stage = optional_choice(steps.get("next_stage"), "next_steps.next_stage", STAGES, "unknown")
     return {
         "next_stage": next_stage,
         "result_promised_by": optional_date(
@@ -195,9 +192,7 @@ def review(payload: object) -> dict[str, Any]:
     data = require_object(payload, "input")
     company = require_text(data.get("company"), "company")
 
-    stage = data.get("stage", "unknown")
-    if stage not in STAGES:
-        raise ValueError(f"stage must be one of {list(STAGES)}")
+    stage = optional_choice(data.get("stage"), "stage", STAGES, "unknown")
 
     interview_date = optional_date(data.get("date"), "date")
     as_of = optional_date(data.get("as_of"), "as_of")

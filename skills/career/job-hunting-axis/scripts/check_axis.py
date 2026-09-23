@@ -12,6 +12,7 @@ from typing import Any
 
 from _common import (
     flag_collector,
+    optional_choice,
     optional_text,
     require_list,
     require_object,
@@ -48,12 +49,8 @@ def parse_criteria(raw: object) -> list[dict[str, Any]]:
             raise ValueError(f"{path}.id is duplicated: {criterion_id!r}")
         seen.add(criterion_id)
 
-        kind = item.get("kind", "want")
-        if kind not in KINDS:
-            raise ValueError(f"{path}.kind must be one of {list(KINDS)}")
-        basis = item.get("basis", "unknown")
-        if basis not in BASES:
-            raise ValueError(f"{path}.basis must be one of {list(BASES)}")
+        kind = optional_choice(item.get("kind"), f"{path}.kind", KINDS, "want")
+        basis = optional_choice(item.get("basis"), f"{path}.basis", BASES, "unknown")
 
         observable = [
             require_text(way, f"{path}.observable[{position}]")
@@ -122,11 +119,9 @@ def parse_candidates(raw: object, criterion_ids: set[str]) -> list[dict[str, Any
                 raise ValueError(
                     f"{path}.assessment[{position}].criterion is duplicated: {criterion!r}"
                 )
-            status = block.get("status", "unknown")
-            if status not in ASSESSMENTS:
-                raise ValueError(
-                    f"{path}.assessment[{position}].status must be one of {list(ASSESSMENTS)}"
-                )
+            status = optional_choice(
+                block.get("status"), f"{path}.assessment[{position}].status", ASSESSMENTS, "unknown"
+            )
             assessment[str(criterion)] = status
         candidates.append({"label": label, "assessment": assessment})
     return candidates
@@ -253,9 +248,7 @@ def collect_flags(
 
 def check(payload: object) -> dict[str, Any]:
     data = require_object(payload, "input")
-    track = data.get("track", "chuto")
-    if track not in TRACKS:
-        raise ValueError(f"track must be one of {list(TRACKS)}")
+    track = optional_choice(data.get("track"), "track", TRACKS, "chuto")
 
     criteria = parse_criteria(data.get("criteria"))
     criterion_ids = {item["id"] for item in criteria}

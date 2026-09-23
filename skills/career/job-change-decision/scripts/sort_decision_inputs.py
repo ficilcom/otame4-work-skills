@@ -14,6 +14,7 @@ from typing import Any
 
 from _common import (
     flag_collector,
+    optional_choice,
     optional_date,
     optional_text,
     require_list,
@@ -63,18 +64,12 @@ def parse_concerns(raw: object) -> list[dict[str, Any]]:
             raise ValueError(f"{path}.id is duplicated: {concern_id!r}")
         seen.add(concern_id)
 
-        cause = item.get("cause", "unknown")
-        if cause not in CAUSES:
-            raise ValueError(f"{path}.cause must be one of {list(CAUSES)}")
-        portable = item.get("portable", "unknown")
-        if portable not in PORTABILITY:
-            raise ValueError(f"{path}.portable must be one of {list(PORTABILITY)}")
-        tried = item.get("tried_internally", "unknown")
-        if tried not in TRIED_INTERNALLY:
-            raise ValueError(f"{path}.tried_internally must be one of {list(TRIED_INTERNALLY)}")
-        severity = item.get("severity", "unknown")
-        if severity not in SEVERITIES:
-            raise ValueError(f"{path}.severity must be one of {list(SEVERITIES)}")
+        cause = optional_choice(item.get("cause"), f"{path}.cause", CAUSES, "unknown")
+        portable = optional_choice(item.get("portable"), f"{path}.portable", PORTABILITY, "unknown")
+        tried = optional_choice(
+            item.get("tried_internally"), f"{path}.tried_internally", TRIED_INTERNALLY, "unknown"
+        )
+        severity = optional_choice(item.get("severity"), f"{path}.severity", SEVERITIES, "unknown")
 
         concerns.append(
             {
@@ -105,9 +100,9 @@ def parse_keeps(raw: object) -> list[dict[str, Any]]:
     keeps = []
     for index, entry in enumerate(entries):
         item = require_object(entry, f"keeps[{index}]")
-        importance = item.get("importance", "unknown")
-        if importance not in IMPORTANCE:
-            raise ValueError(f"keeps[{index}].importance must be one of {list(IMPORTANCE)}")
+        importance = optional_choice(
+            item.get("importance"), f"keeps[{index}].importance", IMPORTANCE, "unknown"
+        )
         keeps.append(
             {
                 "text": require_text(item.get("text"), f"keeps[{index}].text"),
@@ -127,9 +122,9 @@ def parse_options(raw: object) -> dict[str, dict[str, Any]]:
             raise ValueError(f"options[{index}].code is not a known option: {code!r}")
         if code in parsed:
             raise ValueError(f"options[{index}].code is duplicated: {code!r}")
-        status = item.get("status", "not_considered")
-        if status not in OPTION_STATUSES:
-            raise ValueError(f"options[{index}].status must be one of {list(OPTION_STATUSES)}")
+        status = optional_choice(
+            item.get("status"), f"options[{index}].status", OPTION_STATUSES, "not_considered"
+        )
         parsed[code] = {
             "status": status,
             "note": optional_text(item.get("note"), f"options[{index}].note"),

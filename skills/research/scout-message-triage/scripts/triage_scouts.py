@@ -13,6 +13,7 @@ from typing import Any
 
 from _common import (
     flag_collector,
+    optional_choice,
     optional_date,
     optional_text,
     require_list,
@@ -36,15 +37,9 @@ def parse_scout(raw: object, index: int) -> dict[str, Any]:
     path = f"scouts[{index}]"
     item = require_object(raw, path)
 
-    sender = item.get("from", "unknown")
-    if sender not in SENDERS:
-        raise ValueError(f"{path}.from must be one of {list(SENDERS)}")
-    pay_claim = item.get("pay_claim_type", "none")
-    if pay_claim not in PAY_CLAIM_TYPES:
-        raise ValueError(f"{path}.pay_claim_type must be one of {list(PAY_CLAIM_TYPES)}")
-    interest = item.get("user_interest", "unknown")
-    if interest not in INTEREST_LEVELS:
-        raise ValueError(f"{path}.user_interest must be one of {list(INTEREST_LEVELS)}")
+    sender = optional_choice(item.get("from"), f"{path}.from", SENDERS, "unknown")
+    pay_claim = optional_choice(item.get("pay_claim_type"), f"{path}.pay_claim_type", PAY_CLAIM_TYPES, "none")
+    interest = optional_choice(item.get("user_interest"), f"{path}.user_interest", INTEREST_LEVELS, "unknown")
 
     conditions_raw = require_object(item.get("conditions", {}), f"{path}.conditions")
     conditions = {}

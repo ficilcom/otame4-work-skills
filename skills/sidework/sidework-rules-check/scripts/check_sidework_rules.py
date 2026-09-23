@@ -15,6 +15,7 @@ from typing import Any
 from _common import (
     flag_collector,
     optional_bool,
+    optional_choice,
     optional_int,
     optional_number,
     optional_text,
@@ -120,20 +121,12 @@ def as_hours(value: Decimal | None) -> float | None:
     return float(value.quantize(HOUR))
 
 
-def parse_choice(value: object, path: str, allowed: tuple[str, ...], default: str) -> str:
-    if value is None:
-        return default
-    if value not in allowed:
-        raise ValueError(f"{path} must be one of {list(allowed)}")
-    return str(value)
-
-
 def parse_rules(raw: object) -> dict[str, Any]:
     block = require_object(raw if raw is not None else {}, "rules")
     return {
-        "source": parse_choice(block.get("source"), "rules.source", RULE_SOURCES, "unknown"),
+        "source": optional_choice(block.get("source"), "rules.source", RULE_SOURCES, "unknown"),
         "reviewed": optional_bool(block.get("reviewed"), "rules.reviewed"),
-        "regime": parse_choice(block.get("regime"), "rules.regime", REGIMES, "unknown"),
+        "regime": optional_choice(block.get("regime"), "rules.regime", REGIMES, "unknown"),
         "clause_quoted": optional_bool(block.get("clause_quoted"), "rules.clause_quoted"),
     }
 
@@ -144,7 +137,7 @@ def parse_sidework(raw: object) -> dict[str, str]:
     if unknown_keys:
         raise ValueError(f"sidework has unknown keys: {unknown_keys}")
     return {
-        key: parse_choice(block.get(key), f"sidework.{key}", TOUCH_VALUES, "unknown")
+        key: optional_choice(block.get(key), f"sidework.{key}", TOUCH_VALUES, "unknown")
         for key in TOUCHPOINT_KEYS
     }
 
@@ -191,7 +184,7 @@ def parse_items(raw: object) -> dict[str, dict[str, Any]]:
         if source is not None and source not in RULE_SOURCES:
             raise ValueError(f"{path}.source must be one of {list(RULE_SOURCES)}")
         parsed[str(code)] = {
-            "status": parse_choice(item.get("status"), f"{path}.status", ITEM_STATUSES, "unknown"),
+            "status": optional_choice(item.get("status"), f"{path}.status", ITEM_STATUSES, "unknown"),
             "source": source,
             "note": optional_text(item.get("note"), f"{path}.note"),
         }
@@ -209,7 +202,7 @@ def parse_application(raw: object) -> dict[str, str]:
             raise ValueError(f"{path}.code is not a known application code: {code!r}")
         if code in parsed:
             raise ValueError(f"{path}.code is duplicated: {code!r}")
-        parsed[str(code)] = parse_choice(
+        parsed[str(code)] = optional_choice(
             item.get("status"), f"{path}.status", APPLICATION_STATUSES, "missing"
         )
     return parsed
@@ -463,8 +456,8 @@ def collect_flags(
 
 def check(payload: object) -> dict[str, Any]:
     data = require_object(payload, "input")
-    status = parse_choice(data.get("status"), "status", STATUSES, "unknown")
-    engagement = parse_choice(data.get("engagement"), "engagement", ENGAGEMENTS, "unknown")
+    status = optional_choice(data.get("status"), "status", STATUSES, "unknown")
+    engagement = optional_choice(data.get("engagement"), "engagement", ENGAGEMENTS, "unknown")
     rules = parse_rules(data.get("rules"))
     sidework = parse_sidework(data.get("sidework"))
     hours_input = parse_hours(data.get("hours"))
